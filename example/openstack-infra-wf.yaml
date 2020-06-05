@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: openstack-infra-
+spec:
+  entrypoint: deploy
+  serviceAccountName: argo-deploy-sa
+  arguments:
+    parameters:
+    - name: app
+      value: openstack
+  templates:
+  - name: deploy
+    dag:
+      tasks:
+      - name: infra
+        templateRef:
+          name: helmrelease
+          template: ChartGroup
+        arguments:
+          parameters: 
+          - name: chart_list
+            value: |
+              [
+                "ceph-provisioners",
+                "ingress",
+                "memcached",
+                "rabbitmq",
+                "mariadb"
+              ]
+        dependencies: []
