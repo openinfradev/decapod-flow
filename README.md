@@ -2,6 +2,8 @@
 `decapod-flow` is an archive of Argo WorkflowTemplate.
 It contains WorkflowTemplates and Workflow examples.
 
+![Decapod-flow Image](docs/assets/decapod-flow.png)
+
 Purpose
 -------
 * Visibility of complex pipeline. i.e.) OpenStack deployment process
