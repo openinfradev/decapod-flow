@@ -1,0 +1,94 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: helmrelease
+spec:
+  arguments:
+    parameters:
+    - name: app
+      value: ""   ## Required parameter. "lma", "openstack", "sona" and so on. 
+  templates:
+  - name: deployHelmRelease
+    retryStrategy:
+      limit: 2
+    inputs:
+      parameters:
+      - name: chart_name
+    volumes:
+    - name: manifest
+      configMap:
+        name: manifest
+    activeDeadlineSeconds: 900
+    container:
+      name: 'deploy'
+      image: k8s.gcr.io/hyperkube:v1.13.12
+      command:
+      - /bin/bash
+      - -c
+      - |
+        set -e
+        function log() {
+          level=$1
+          msg=$2
+          date=$(date '+%F %H:%M:%S')
+          echo "[$date] $level     $msg"
+        }
+
+        function checkReleased() {
+          releaseStatus=$(kubectl get hr ${CHART_NAME} -ojsonpath={.status.releaseStatus})
+          if [[ $releaseStatus =~ deployed ]]; then
+            log "INFO" "HelmRelease $CHART_NAME is already released."
+            exit 0
+          fi 
+        }
+
+        # deploy HelmRelease
+        log "INFO" "kubectl apply -f /manifest/${APP}-manifest.yaml -lname=${CHART_NAME}"
+        kubectl apply -f /manifest/${APP}-manifest.yaml -lname=${CHART_NAME}
+
+        # wait first 30 sec for chart sync  
+        sleep 30s
+
+        # check if it released.
+        checkReleased
+
+        # wait until deployment completed.
+        until [ $(kubectl get hr $CHART_NAME -ojsonpath={.status.phase}) = "Succeeded" ]
+        do
+          kubectl get hr $CHART_NAME
+          phase=$(kubectl get hr $CHART_NAME -ojsonpath={.status.phase})
+          
+          log "INFO" "HelmRelease Phase: $phase... waiting for Succeeded..."
+          # exit with error code 1 when phase is one of below strings.
+          # - ChartFetchFailed: failed to get helm chart 
+          # - Failed: failed to helm chart deploy
+          # - RollbackFailed: failed to roll back
+          if [[ $phase =~ ^(Failed|RollbackFailed)$ ]]; then
+            reason=$(kubectl get hr $CHART_NAME -ojsonpath={.status.conditions[0].message})
+            log "ERROR" "Deploy HelmRelease phase: $phase.\n Detailed: $reason"
+            exit 1
+          fi
+          sleep 10s # interval
+        done
+        log "INFO" "$CHART_NAME deployment successfully completed."
+
+      volumeMounts:
+      - name: manifest
+        mountPath: /manifest
+      env:
+      - name: CHART_NAME
+        value: "{{inputs.parameters.chart_name}}"
+      - name: APP
+        value: "{{workflow.parameters.app}}"
+
+  - name: ChartGroup
+    inputs:
+      parameters:
+      - name: chart_list
+    steps:
+    - - name: "HelmRelease"
+        template: deployHelmRelease
+        arguments:
+          parameters:
+          - {name: chart_name, value: "{{item}}"}
+        withParam: "{{inputs.parameters.chart_list}}"
