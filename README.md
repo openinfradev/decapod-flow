@@ -1,6 +1,6 @@
 # decapod-flow
 
-Note: `DECAPOD (DEClarative APplication Orchestration & Delivery)` is a pilot project leveraging Kustomize, Helm Operator, Argo Workflow to deploy applications on Kubernetes. 
+> Note: `DECAPOD (DEClarative APplication Orchestration & Delivery)` is a pilot project leveraging Kustomize, Helm Operator, Argo Workflow to deploy applications on Kubernetes. 
 
 `decapod-flow` is an archive of Argo WorkflowTemplate.
 It contains WorkflowTemplates and Workflow examples.
