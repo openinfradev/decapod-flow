@@ -1,11 +1,11 @@
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
-  name: helmrelease
+  name: deploy-helmrelease
 spec:
   arguments:
     parameters:
-    - name: app
+    - name: app_name
       value: ""   ## Required parameter. "lma", "openstack", "sona" and so on. 
   templates:
   - name: deployHelmRelease
@@ -17,11 +17,11 @@ spec:
     volumes:
     - name: manifest
       configMap:
-        name: manifest
+        name: "{{workflow.parameters.app_name}}"
     activeDeadlineSeconds: 900
     container:
       name: 'deploy'
-      image: k8s.gcr.io/hyperkube:v1.13.12
+      image: k8s.gcr.io/hyperkube:v1.17.6
       command:
       - /bin/bash
       - -c
@@ -79,7 +79,7 @@ spec:
       - name: CHART_NAME
         value: "{{inputs.parameters.chart_name}}"
       - name: APP
-        value: "{{workflow.parameters.app}}"
+        value: "{{workflow.parameters.app_name}}"
 
   - name: ChartGroup
     inputs:
