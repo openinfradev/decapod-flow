@@ -26,7 +26,6 @@ spec:
       - /bin/bash
       - -c
       - |
-        set -e
         function log() {
           level=$1
           msg=$2
@@ -42,9 +41,27 @@ spec:
           fi 
         }
 
+        function createNamespace() {
+          targetNs=$(kubectl apply -f /manifest/${APP}-manifest.yaml -lname=${CHART_NAME} --dry-run -ojsonpath={.spec.targetNamespace})
+          kubectl get namespace $targetNs
+          if [[ $? =~ 1 ]]; then
+            log "INFO" "Not Exist $targetNs namespace"
+            kubectl create ns $targetNs
+            kubectl label ns $targetNs name=$targetNs
+          fi
+        }
+
+        # create targetNamespace if not exists
+        createNamespace
+
         # deploy HelmRelease
         log "INFO" "kubectl apply -f /manifest/${APP}-manifest.yaml -lname=${CHART_NAME}"
         kubectl apply -f /manifest/${APP}-manifest.yaml -lname=${CHART_NAME}
+
+        if [[ $? =~ 1 ]]; then
+          log "ERROR" "kubectl apply not working properly. please check your manifest."
+          exit 1
+        fi
 
         # wait first 30 sec for chart sync  
         sleep 30s
@@ -56,6 +73,11 @@ spec:
         until [ $(kubectl get hr $CHART_NAME -ojsonpath={.status.phase}) = "Succeeded" ]
         do
           kubectl get hr $CHART_NAME
+          if [[ $? =~ 1 ]]; then
+            log "ERROR" "Can't get HelmRelease $CHART_NAME"
+            exit 1
+          fi
+
           phase=$(kubectl get hr $CHART_NAME -ojsonpath={.status.phase})
           
           log "INFO" "HelmRelease Phase: $phase... waiting for Succeeded..."
