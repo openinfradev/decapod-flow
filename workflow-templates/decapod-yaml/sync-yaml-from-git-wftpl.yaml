@@ -1,0 +1,102 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: sync-yaml-from-git
+spec:
+  entrypoint: startpoint
+  arguments:
+    parameters:
+    - name: git_url
+      value: "Enter your GIT URL"
+    - name: git_tag
+      value: "master"
+    - name: git_username
+      value: "Enter your GIT ID"
+    - name: git_password
+      value: "Enter your GIT Password"
+    - name: site_name
+      value: "Enter the site's directory name. ex) stage,production,dev"
+  volumeClaimTemplates:
+  - metadata:
+      name: workdir
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: rbd
+  templates:
+  - name: startpoint
+    steps:
+    - - name: "sync"
+        template: sync-gitsource
+        arguments:
+          parameters:
+          - { name: git_url, value: "{{workflow.parameters.git_url}}" }
+          - { name: git_tag, value: "{{workflow.parameters.git_tag}}" }
+          - { name: git_username, value: "{{workflow.parameters.git_username}}" }
+          - { name: git_password, value: "{{workflow.parameters.git_password}}" }
+
+    - - name: "update"
+        template: update-manifest-configmap
+        arguments:
+          parameters:
+          - { name: site_name, value: "{{workflow.parameters.site_name}}" }
+
+  - name: sync-gitsource
+    inputs:
+      parameters:
+      - name: git_url
+      - name: git_tag
+      - name: git_username
+      - name: git_password
+    container:
+      name: 'sync'
+      image: sktdev/git-tool:v1.0
+      command:
+      - /bin/bash
+      - -c
+      - |
+        set -xe
+        cd /mnt/workdir
+        ENCODED_PASSWORD=$(urlencode $GIT_PASSWORD)
+        CLONE_URL=$(echo $GIT_URL | sed 's/\/\//\/\/'"$GIT_USERNAME"':'"$ENCODED_PASSWORD"'@/')
+        git clone -b $GIT_TAG $CLONE_URL
+      env:
+      - name: GIT_URL
+        value: "{{inputs.parameters.git_url}}"
+      - name: GIT_TAG
+        value: "{{inputs.parameters.git_tag}}"
+      - name: GIT_USERNAME
+        value: "{{inputs.parameters.git_username}}"
+      - name: GIT_PASSWORD
+        value: "{{inputs.parameters.git_password}}"
+      volumeMounts:
+      - name: workdir
+        mountPath: /mnt/workdir
+
+  - name: update-manifest-configmap
+    inputs:
+      parameters:
+      - name: site_name
+    container:
+      name: 'update'
+      image: k8s.gcr.io/hyperkube:v1.17.6
+      command:
+      - /bin/bash
+      - -c
+      - |
+        set -xe
+        cd /mnt/workdir
+        find . -regex ".*$SITE_NAME.*\/.*-manifest.yaml" | while read -r path ; do
+          echo $path
+          NAME=$(echo $path | sed -E 's/.*\/(.*)-manifest.yaml/\1/')
+          kubectl create configmap "$NAME" --from-file=$path --dry-run -oyaml | kubectl apply -f-
+        done 
+      env:
+      - name: SITE_NAME
+        value: "{{inputs.parameters.site_name}}"
+      volumeMounts:
+      - name: workdir
+        mountPath: /mnt/workdir
+
