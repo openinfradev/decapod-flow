@@ -34,7 +34,7 @@ spec:
         }
 
         function checkReleased() {
-          releaseStatus=$(kubectl get hr ${CHART_NAME} -ojsonpath={.status.releaseStatus})
+          releaseStatus=$(kubectl get hr ${CHART_NAME} -ndefault -ojsonpath={.status.releaseStatus})
           if [[ $releaseStatus =~ deployed ]]; then
             log "INFO" "HelmRelease $CHART_NAME is already released."
             exit 0
@@ -56,7 +56,7 @@ spec:
 
         # deploy HelmRelease
         log "INFO" "kubectl apply -f /manifest/${APP}-manifest.yaml -lname=${CHART_NAME}"
-        kubectl apply -f /manifest/${APP}-manifest.yaml -lname=${CHART_NAME}
+        kubectl apply -f /manifest/${APP}-manifest.yaml -lname=${CHART_NAME} -ndefault
 
         if [[ $? =~ 1 ]]; then
           log "ERROR" "kubectl apply not working properly. please check your manifest."
@@ -70,15 +70,15 @@ spec:
         checkReleased
 
         # wait until deployment completed.
-        until [ $(kubectl get hr $CHART_NAME -ojsonpath={.status.phase}) = "Succeeded" ]
+        until [ $(kubectl get hr $CHART_NAME -ndefault -ojsonpath={.status.phase}) = "Succeeded" ]
         do
-          kubectl get hr $CHART_NAME
+          kubectl get hr $CHART_NAME -ndefault
           if [[ $? =~ 1 ]]; then
             log "ERROR" "Can't get HelmRelease $CHART_NAME"
             exit 1
           fi
 
-          phase=$(kubectl get hr $CHART_NAME -ojsonpath={.status.phase})
+          phase=$(kubectl get hr $CHART_NAME -ndefault -ojsonpath={.status.phase})
           
           log "INFO" "HelmRelease Phase: $phase... waiting for Succeeded..."
           # exit with error code 1 when phase is one of below strings.
@@ -86,7 +86,7 @@ spec:
           # - Failed: failed to helm chart deploy
           # - RollbackFailed: failed to roll back
           if [[ $phase =~ ^(Failed|RollbackFailed)$ ]]; then
-            reason=$(kubectl get hr $CHART_NAME -ojsonpath={.status.conditions[0].message})
+            reason=$(kubectl get hr $CHART_NAME -ndefault -ojsonpath={.status.conditions[0].message})
             log "ERROR" "Deploy HelmRelease phase: $phase.\n Detailed: $reason"
             exit 1
           fi
