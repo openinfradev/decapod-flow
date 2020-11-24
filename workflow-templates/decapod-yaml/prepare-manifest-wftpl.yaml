@@ -59,7 +59,7 @@ spec:
       - |
         set -e
         cd /mnt/workdir
-        if [[ "${GIT_PASSWORD}" != "" ]]; then
+        if [[ "${GIT_USERNAME}" != "" ]] && [[ "${GIT_PASSWORD}" != "" ]]; then
           ENCODED_PASSWORD=$(urlencode $GIT_PASSWORD)
           CLONE_URL=$(echo $GIT_URL | sed 's/\/\//\/\/'"$GIT_USERNAME"':'"$ENCODED_PASSWORD"'@/')
         else
