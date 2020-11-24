@@ -11,9 +11,9 @@ spec:
     - name: git_tag
       value: "master"
     - name: git_username
-      value: "Enter your GIT ID"
+      value: ""
     - name: git_password
-      value: "Enter your GIT Password"
+      value: ""
     - name: site_name
       value: "Enter the site's directory name. ex) stage,production,dev"
   volumeClaimTemplates:
@@ -57,10 +57,14 @@ spec:
       - /bin/bash
       - -c
       - |
-        set -xe
+        set -e
         cd /mnt/workdir
-        ENCODED_PASSWORD=$(urlencode $GIT_PASSWORD)
-        CLONE_URL=$(echo $GIT_URL | sed 's/\/\//\/\/'"$GIT_USERNAME"':'"$ENCODED_PASSWORD"'@/')
+        if [[ "${GIT_USERNAME}" != "" ]] && [[ "${GIT_PASSWORD}" != "" ]]; then
+          ENCODED_PASSWORD=$(urlencode $GIT_PASSWORD)
+          CLONE_URL=$(echo $GIT_URL | sed 's/\/\//\/\/'"$GIT_USERNAME"':'"$ENCODED_PASSWORD"'@/')
+        else
+          CLONE_URL=$GIT_URL
+        fi
         git clone -b $GIT_TAG $CLONE_URL
       env:
       - name: GIT_URL
