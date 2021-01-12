@@ -12,7 +12,7 @@ It contains WorkflowTemplates and Workflow examples.
 * Share useful WorkflowTemplates for devops or cicd.  
 ## Documents
 * [Quick Start](docs/quickstart.md)
-* [Contribution](docs/contribuution.md)
+* [Contribution](docs/contribution.md)
 
 ## Feature
 
