@@ -7,38 +7,19 @@ It contains WorkflowTemplates and Workflow examples.
 
 ![Decapod-flow Image](docs/assets/decapod-flow.png)
 
-Purpose
--------
+## Purpose
 * Visibility of complex pipeline. i.e.) OpenStack deployment process
 * Share useful WorkflowTemplates for devops or cicd.  
+## Documents
+* [Quick Start](docs/quickstart.md)
+* [Contribution](docs/contribution.md)
 
-Prerequisite
-------------
-- Install [Argo](https://github.com/argoproj/argo) and `Argo CLI`
-- Install [Helm Operator](https://github.com/fluxcd/helm-operator)
+## Feature
 
+### Workflow Templates
+![decapod-workflowtemplate](docs/assets/workflow_template.png)
 
-Usage
-=============
+### Workflow
+![workflow](docs/assets/workflows.png)
 
-### 1) Apply WorkflowTemplate
-Create the workflow template using `Argo CLI`
-
-> ```
-> $ argo template create helmrelease-wftpl.yaml
-> ```
-
-then you can see the workflow template in a list if it's successfully submited.  
-Also, you can check the workflow template in Argo UI.
-> ```
-> $ argo template list
-> NAME
-> helmrelease
-> ```
-
-### 2) Run Workflow with parameters
-Copy site-values.yaml and update the values.
-> ```
-> $ argo submit openstack-infra-wf.tpl
-> ```
-
+![openstack_workflow](docs/assets/openstack_workflow.png)
