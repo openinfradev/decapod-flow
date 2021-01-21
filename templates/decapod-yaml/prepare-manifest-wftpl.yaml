@@ -72,40 +72,41 @@ spec:
         fi
 
         # Clone base-yaml, site-yaml 
-        git clone -b $SITE_YAML_TAG $CLONE_URL site-yaml && cd site-yaml
-        git clone $BASE_YAML_URL base-yaml
+        git clone -b $SITE_YAML_TAG $CLONE_URL site-yaml
+        git clone $BASE_YAML_URL base-yaml && cd site-yaml
         if [ $? -ne 0 ]; then
           exit $?
         fi
 
-        APP_NAME="lma"
-        
-        cp -r base-yaml/$APP_NAME/base $APP_NAME/
-        APP_NAME="lma"
-        SITE_PATH="$APP_NAME/site/$SITE_NAME"
-        OUTPUT_PATH="$APP_NAME/output/$SITE_NAME/$APP_NAME-manifest.yaml"
+        for APP_NAME in `ls -d *[^docs]/ | sed 's/\///'`
+        do
+          echo "[INFO] Try to render $APP_NAME for $SITE_NAME site"
+          cp -r ../base-yaml/$APP_NAME/base $APP_NAME/
+          SITE_PATH="$APP_NAME/site/$SITE_NAME"
+          OUTPUT_PATH="$APP_NAME/output/$SITE_NAME/$APP_NAME-manifest.yaml"
 
-        if [ ! -d "$SITE_PATH" ]; then
-          echo "[ERROR] not exist $SITE_NAME directory"
-          exit 1
-        fi
+          if [ ! -d "$SITE_PATH" ]; then
+            echo "[INFO] $APP_NAME of $SITE_NAME is not exist"
+            continue
+          fi
 
-        mkdir -p $APP_NAME/output/$i/
+          mkdir -p $APP_NAME/output/$i/
 
-        echo "[INFO] Rendering $APP_NAME-manifest.yaml"
-        kustomize build --enable_alpha_plugins $SITE_PATH -o $OUTPUT_PATH
+          echo "[INFO] Rendering $APP_NAME-manifest.yaml"
+          kustomize build --enable_alpha_plugins $SITE_PATH -o $OUTPUT_PATH
 
-        if [ $? -ne 0 ]; then
-          echo "[ERROR] kustomize build error"
-          exit $?
-        fi
+          if [ $? -ne 0 ]; then
+            echo "[ERROR] kustomize build error"
+            exit $?
+          fi
 
-        if [ -f "$OUTPUT_PATH" ]; then
-          echo "[INFO] Successfully Completed!"
-        else
-          echo "[INFO] Failed to render $APP_NAME-manifest.yaml"
-          exit 1
-        fi
+          if [ -f "$OUTPUT_PATH" ]; then
+            echo "[INFO] Successfully Completed!"
+          else
+            echo "[INFO] Failed to render $APP_NAME-manifest.yaml"
+            exit 1
+          fi
+        done
       env:
       - name: BASE_YAML_URL 
         value: "{{inputs.parameters.base_yaml_url}}"
