@@ -6,16 +6,18 @@ spec:
   entrypoint: startpoint
   arguments:
     parameters:
-    - name: git_url
-      value: "Enter your GIT URL"
-    - name: git_tag
-      value: "master"
+    - name: base_yaml_url
+      value: "https://github.com/openinfradev/decapod-base-yaml.git"
+    - name: site_yaml_url
+      value: "https://github.com/openinfradev/decapod-site-yaml.git"
+    - name: site_yaml_tag
+      value: "main"
     - name: git_username
       value: ""
     - name: git_password
       value: ""
     - name: site_name
-      value: "Enter the site's directory name. ex) stage,production,dev"
+      value: "hanu-deploy-apps"
   volumeClaimTemplates:
   - metadata:
       name: workdir
@@ -23,36 +25,39 @@ spec:
       accessModes: ["ReadWriteOnce"]
       resources:
         requests:
-          storage: 1Gi
+          storage: 10Mi
       storageClassName: rbd
   templates:
   - name: startpoint
     steps:
-    - - name: "sync"
-        template: sync-gitsource
+    - - name: "render"
+        template: render-site-yaml
         arguments:
           parameters:
-          - { name: git_url, value: "{{workflow.parameters.git_url}}" }
-          - { name: git_tag, value: "{{workflow.parameters.git_tag}}" }
+          - { name: base_yaml_url, value: "{{workflow.parameters.base_yaml_url}}" }
+          - { name: site_yaml_url, value: "{{workflow.parameters.site_yaml_url}}" }
+          - { name: site_yaml_tag, value: "{{workflow.parameters.site_yaml_tag}}" }
           - { name: git_username, value: "{{workflow.parameters.git_username}}" }
           - { name: git_password, value: "{{workflow.parameters.git_password}}" }
-
+          - { name: site_name, value: "{{workflow.parameters.site_name}}" }
     - - name: "update"
         template: update-manifest-configmap
         arguments:
           parameters:
           - { name: site_name, value: "{{workflow.parameters.site_name}}" }
 
-  - name: sync-gitsource
+  - name: render-site-yaml
     inputs:
       parameters:
-      - name: git_url
-      - name: git_tag
+      - name: base_yaml_url
+      - name: site_yaml_url
+      - name: site_yaml_tag
       - name: git_username
       - name: git_password
+      - name: site_name
     container:
-      name: 'sync'
-      image: sktdev/git-tool:v1.0
+      name: 'render'
+      image: sktdev/decapod-kustomize:latest
       command:
       - /bin/bash
       - -c
@@ -61,20 +66,60 @@ spec:
         cd /mnt/workdir
         if [[ "${GIT_USERNAME}" != "" ]] && [[ "${GIT_PASSWORD}" != "" ]]; then
           ENCODED_PASSWORD=$(urlencode $GIT_PASSWORD)
-          CLONE_URL=$(echo $GIT_URL | sed 's/\/\//\/\/'"$GIT_USERNAME"':'"$ENCODED_PASSWORD"'@/')
+          CLONE_URL=$(echo $SITE_YAML_URL | sed 's/\/\//\/\/'"$GIT_USERNAME"':'"$ENCODED_PASSWORD"'@/')
         else
-          CLONE_URL=$GIT_URL
+          CLONE_URL=$SITE_YAML_URL
         fi
-        git clone -b $GIT_TAG $CLONE_URL
+
+        # Clone base-yaml, site-yaml 
+        git clone -b $SITE_YAML_TAG $CLONE_URL site-yaml
+        git clone $BASE_YAML_URL base-yaml && cd site-yaml
+        if [ $? -ne 0 ]; then
+          exit $?
+        fi
+
+        for APP_NAME in `ls -d *[^docs]/ | sed 's/\///'`
+        do
+          echo "[INFO] Try to render $APP_NAME for $SITE_NAME site"
+          cp -r ../base-yaml/$APP_NAME/base $APP_NAME/
+          SITE_PATH="$APP_NAME/site/$SITE_NAME"
+          OUTPUT_PATH="$APP_NAME/output/$SITE_NAME/$APP_NAME-manifest.yaml"
+
+          if [ ! -d "$SITE_PATH" ]; then
+            echo "[INFO] $APP_NAME of $SITE_NAME is not exist"
+            continue
+          fi
+
+          mkdir -p $APP_NAME/output/$i/
+
+          echo "[INFO] Rendering $APP_NAME-manifest.yaml"
+          kustomize build --enable_alpha_plugins $SITE_PATH -o $OUTPUT_PATH
+
+          if [ $? -ne 0 ]; then
+            echo "[ERROR] kustomize build error"
+            exit $?
+          fi
+
+          if [ -f "$OUTPUT_PATH" ]; then
+            echo "[INFO] Successfully Completed!"
+          else
+            echo "[INFO] Failed to render $APP_NAME-manifest.yaml"
+            exit 1
+          fi
+        done
       env:
-      - name: GIT_URL
-        value: "{{inputs.parameters.git_url}}"
-      - name: GIT_TAG
-        value: "{{inputs.parameters.git_tag}}"
+      - name: BASE_YAML_URL 
+        value: "{{inputs.parameters.base_yaml_url}}"
+      - name: SITE_YAML_URL
+        value: "{{inputs.parameters.site_yaml_url}}"
+      - name: SITE_YAML_TAG
+        value: "{{inputs.parameters.site_yaml_tag}}"
       - name: GIT_USERNAME
         value: "{{inputs.parameters.git_username}}"
       - name: GIT_PASSWORD
         value: "{{inputs.parameters.git_password}}"
+      - name: SITE_NAME
+        value: "{{inputs.parameters.site_name}}"
       volumeMounts:
       - name: workdir
         mountPath: /mnt/workdir
