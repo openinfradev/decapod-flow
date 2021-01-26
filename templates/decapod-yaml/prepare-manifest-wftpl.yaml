@@ -90,7 +90,7 @@ spec:
             continue
           fi
 
-          mkdir -p $APP_NAME/output/$i/
+          mkdir -p $APP_NAME/output/$SITE_NAME/
 
           echo "[INFO] Rendering $APP_NAME-manifest.yaml"
           kustomize build --enable_alpha_plugins $SITE_PATH -o $OUTPUT_PATH
