@@ -24,7 +24,7 @@ spec:
             value: |
               [
                 "prometheus-operator",
-                "elasticsearch-operator",
+                "eck-operator",
                 "fluentbit-operator"
               ]
         dependencies: []
@@ -37,7 +37,7 @@ spec:
           - name: chart_list
             value: |
               [
-                "elasticsearch-kibana",
+                "eck-resource",
                 "kubernetes-event-exporter"
               ]
         dependencies: [operator]

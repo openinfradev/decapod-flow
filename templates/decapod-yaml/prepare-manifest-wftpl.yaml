@@ -8,6 +8,8 @@ spec:
     parameters:
     - name: base_yaml_url
       value: "https://github.com/openinfradev/decapod-base-yaml.git"
+    - name: base_yaml_tag
+      value: "main"
     - name: site_yaml_url
       value: "https://github.com/openinfradev/decapod-site-yaml.git"
     - name: site_yaml_tag
@@ -35,6 +37,7 @@ spec:
         arguments:
           parameters:
           - { name: base_yaml_url, value: "{{workflow.parameters.base_yaml_url}}" }
+          - { name: base_yaml_tag, value: "{{workflow.parameters.base_yaml_url}}" }
           - { name: site_yaml_url, value: "{{workflow.parameters.site_yaml_url}}" }
           - { name: site_yaml_tag, value: "{{workflow.parameters.site_yaml_tag}}" }
           - { name: git_username, value: "{{workflow.parameters.git_username}}" }
@@ -50,6 +53,7 @@ spec:
     inputs:
       parameters:
       - name: base_yaml_url
+      - name: base_yaml_tag
       - name: site_yaml_url
       - name: site_yaml_tag
       - name: git_username
@@ -73,7 +77,7 @@ spec:
 
         # Clone base-yaml, site-yaml 
         git clone -b $SITE_YAML_TAG $CLONE_URL site-yaml
-        git clone $BASE_YAML_URL base-yaml && cd site-yaml
+        git clone -b $BASE_YAML_TAG $BASE_YAML_URL base-yaml && cd site-yaml
         if [ $? -ne 0 ]; then
           exit $?
         fi
@@ -110,6 +114,8 @@ spec:
       env:
       - name: BASE_YAML_URL 
         value: "{{inputs.parameters.base_yaml_url}}"
+      - name: BASE_YAML_TAG
+        value: "{{inputs.parameters.base_yaml_tag}}"
       - name: SITE_YAML_URL
         value: "{{inputs.parameters.site_yaml_url}}"
       - name: SITE_YAML_TAG
