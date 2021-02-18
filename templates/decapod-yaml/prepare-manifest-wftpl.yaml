@@ -37,7 +37,7 @@ spec:
         arguments:
           parameters:
           - { name: base_yaml_url, value: "{{workflow.parameters.base_yaml_url}}" }
-          - { name: base_yaml_tag, value: "{{workflow.parameters.base_yaml_url}}" }
+          - { name: base_yaml_tag, value: "{{workflow.parameters.base_yaml_tag}}" }
           - { name: site_yaml_url, value: "{{workflow.parameters.site_yaml_url}}" }
           - { name: site_yaml_tag, value: "{{workflow.parameters.site_yaml_tag}}" }
           - { name: git_username, value: "{{workflow.parameters.git_username}}" }
