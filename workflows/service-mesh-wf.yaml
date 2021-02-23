@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: service-mesh-
+  namespace: argo
+spec:
+  entrypoint: deploy
+  serviceAccountName: argo-deploy-sa
+  arguments:
+    parameters:
+    - name: app_name
+      value: "service-mesh"
+  templates:
+  - name: deploy
+    dag:
+      tasks:
+      - name: operator
+        templateRef:
+          name: deploy-helmrelease
+          template: ChartGroup
+        arguments:
+          parameters: 
+          - name: chart_list
+            value: |
+              [
+                "istio-operator",
+                "jaeger-operator"
+              ]
+        dependencies: []
+      - name: resource
+        templateRef:
+          name: deploy-helmrelease
+          template: ChartGroup
+        arguments:
+          parameters: 
+          - name: chart_list
+            value: |
+              [
+                "service-mesh-resource"
+              ]
+        dependencies: [operator]
