@@ -36,6 +36,7 @@ spec:
           - name: chart_list
             value: |
               [
+                "kiali",
                 "service-mesh-resource"
               ]
         dependencies: [operator]
