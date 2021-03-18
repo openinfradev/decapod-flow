@@ -41,6 +41,18 @@ spec:
                 "kubernetes-event-exporter"
               ]
         dependencies: [operator]
+      - name: prepare-lma
+        templateRef:
+          name: deploy-helmrelease
+          template: ChartGroup
+        arguments:
+          parameters: 
+          - name: chart_list
+            value: |
+              [
+                "thanos-config"
+              ]
+        dependencies: [operator]
       - name: fluentbit
         templateRef:
           name: deploy-helmrelease
@@ -70,4 +82,4 @@ spec:
                 "prometheus-adapter",
                 "addons"
               ]
-        dependencies: [operator]
+        dependencies: [prepare-lma]
