@@ -11,7 +11,7 @@ spec:
     - name: base_yaml_tag
       value: "main"
     - name: site_yaml_url
-      value: "https://github.com/openinfradev/decapod-site-yaml.git"
+      value: "https://github.com/openinfradev/decapod-site.git"
     - name: site_yaml_tag
       value: "main"
     - name: git_username
@@ -81,19 +81,17 @@ spec:
           exit $?
         fi
 
-        for APP_NAME in `ls -d *[^docs]/ | sed 's/\///'`
+        for APP_NAME in `ls $SITE_NAME | grep -v docs | sed 's/\///'`
         do
-          echo "[INFO] Try to render $APP_NAME for $SITE_NAME site"
-          cp -r ../base-yaml/$APP_NAME/base $APP_NAME/
-          SITE_PATH="$APP_NAME/site/$SITE_NAME"
-          OUTPUT_PATH="$APP_NAME/output/$SITE_NAME/$APP_NAME-manifest.yaml"
-
+          SITE_PATH="$SITE_NAME/$APP_NAME"
           if [ ! -d "$SITE_PATH" ]; then
             echo "[INFO] $APP_NAME of $SITE_NAME is not exist"
-            continue
+            exit 1
           fi
 
-          mkdir -p $APP_NAME/output/$SITE_NAME/
+          echo "[INFO] Try to render $APP_NAME for $SITE_NAME site"
+          cp -r ../base-yaml/$APP_NAME/base $SITE_NAME/
+          OUTPUT_PATH="$SITE_NAME/$APP_NAME/$APP_NAME-manifest.yaml"
 
           echo "[INFO] Rendering $APP_NAME-manifest.yaml"
           kustomize build --enable_alpha_plugins $SITE_PATH -o $OUTPUT_PATH
@@ -109,6 +107,7 @@ spec:
             echo "[INFO] Failed to render $APP_NAME-manifest.yaml"
             exit 1
           fi
+          rm -rf $SITE_NAME/base
         done
       env:
       - name: BASE_YAML_URL 
