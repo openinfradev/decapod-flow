@@ -37,6 +37,7 @@ spec:
             value: |
               [
                 "kiali-operator",
-                "service-mesh-resource"
+                "service-mesh-controlplane",
+                "service-mesh-gateway"
               ]
         dependencies: [operator]
