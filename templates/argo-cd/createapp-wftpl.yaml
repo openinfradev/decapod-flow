@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: create-application
+spec:
+  arguments:
+    parameters:
+    - name: repository_url
+      value: "https://github.com/openinfradev/decapod-site-cd"
+    - name: argo_server
+      value: "192.168.97.192:30080"
+    - name: argo_username
+      value: "admin"
+    - name: argo_password
+      value: ""
+    - name: site_name
+      value: "hanu-deploy-apps"
+  templates:
+  - name: createApp
+    inputs:
+      parameters:
+      - name: path
+    activeDeadlineSeconds: 900
+    container:
+      name: 'create'
+      image: docker.io/sktdev/argocd:latest
+      command:
+      - /bin/bash
+      - -c
+      - |
+        set -e
+        # log into Argo CD server
+        ./argocd login $ARGO_SERVER --insecure --username $ARGO_USERNAME --password $ARGO_PASSWORD
+
+        sleep 1000
+
+      env:
+      - name: PATH
+        value: "{{inputs.parameters.path}}"
+      - name: ARGO_SERVER
+        value: "{{workflow.parameters.argo_server}}"
+      - name: ARGO_USERNAME
+        value: "{{workflow.parameters.argo_username}}"
+      - name: ARGO_PASSWORD
+        value: "{{workflow.parameters.argo_password}}"
+
+  - name: AppGroup
+    inputs:
+      parameters:
+      - name: list
+    steps:
+    - - name: "InstallAppGroup"
+        template: createApp
+        arguments:
+          parameters:
+          - {name: path, value: "{{item}}"}
+        withParam: "{{inputs.parameters.list}}"
