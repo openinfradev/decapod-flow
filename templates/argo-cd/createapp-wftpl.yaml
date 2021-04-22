@@ -5,21 +5,16 @@ metadata:
 spec:
   arguments:
     parameters:
-    - name: repository_url
-      value: "https://github.com/openinfradev/decapod-site-cd"
-    - name: argo_server
-      value: "192.168.97.192:30080"
-    - name: argo_username
-      value: "admin"
-    - name: argo_password
-      value: ""
     - name: site_name
       value: "hanu-deploy-apps"
+    - name: app_name
+      value: "lma"
   templates:
   - name: createApp
     inputs:
       parameters:
       - name: path
+      - name: namespace
     activeDeadlineSeconds: 900
     container:
       name: 'create'
@@ -28,21 +23,30 @@ spec:
       - /bin/bash
       - -c
       - |
-        set -e
         # log into Argo CD server
         ./argocd login $ARGO_SERVER --insecure --username $ARGO_USERNAME --password $ARGO_PASSWORD
 
-        sleep 1000
+        # check if app already exists.
+        ./argocd app get $PATH 
+        if [[ $? -ne 0 ]]; then
+          # create new application if not exists.
+          ./argocd app create $PATH --repo $REPO --path $SITE_NAME/$APP_NAME/$PATH --dest-namespace $NAMESPACE --dest-name $SITE_NAME --directory-recurse
+        fi
 
+        ./argocd app sync $PATH --async
+        ./argocd app wait $PATH --health
+      envFrom:
+        - secretRef:
+            name: "decapod-argocd-config"
       env:
-      - name: PATH
-        value: "{{inputs.parameters.path}}"
-      - name: ARGO_SERVER
-        value: "{{workflow.parameters.argo_server}}"
-      - name: ARGO_USERNAME
-        value: "{{workflow.parameters.argo_username}}"
-      - name: ARGO_PASSWORD
-        value: "{{workflow.parameters.argo_password}}"
+        - name: PATH
+          value: "{{inputs.parameters.path}}"
+        - name: SITE_NAME
+          value: "{{workflow.parameters.site_name}}"
+        - name: APP_NAME
+          value: "{{workflow.parameters.app_name}}"
+        - name: NAMESPACE
+          value: "{{inputs.parameters.namespace}}"
 
   - name: AppGroup
     inputs:
@@ -53,5 +57,6 @@ spec:
         template: createApp
         arguments:
           parameters:
-          - {name: path, value: "{{item}}"}
+          - {name: path, value: "{{item.path}}"}
+          - {name: namespace, value: "{{item.namespace}}"}
         withParam: "{{inputs.parameters.list}}"
