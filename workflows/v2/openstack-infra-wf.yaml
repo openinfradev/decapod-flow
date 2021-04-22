@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: openstack-infra-
+  namespace: argo
+spec:
+  entrypoint: deploy
+  arguments:
+    parameters:
+    - name: site_name
+      value: "hanu-deploy-apps"
+    - name: app_name
+      value: "openstack"
+  templates:
+  - name: deploy
+    dag:
+      tasks:
+      - name: operator
+        templateRef:
+          name: create-application
+          template: AppGroup
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
+                { "path": "ceph-provisioners", "namespace": "openstack" },
+                { "path": "ingress", "namespace": "openstack" },
+                { "path": "memcached", "namespace": "openstack" },
+                { "path": "rabbitmq", "namespace": "openstack" },
+                { "path": "mariadb", "namespace": "openstack" }
+              ]
+        dependencies: []

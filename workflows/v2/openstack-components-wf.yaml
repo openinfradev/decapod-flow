@@ -1,0 +1,71 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: openstack-components-
+  namespace: argo
+spec:
+  entrypoint: deploy
+  arguments:
+    parameters:
+    - name: site_name
+      value: "hanu-deploy-apps"
+    - name: app_name
+      value: "openstack"
+  templates:
+  - name: deploy
+    dag:
+      tasks:
+      - name: base
+        templateRef:
+          name: create-application
+          template: AppGroup
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
+                { "path": "keystone", "namespace": "openstack" },
+                { "path": "glance", "namespace": "openstack" },
+                { "path": "cinder", "namespace": "openstack" }
+              ]
+        dependencies: []
+      - name: compute-kit 
+        templateRef:
+          name: create-application
+          template: AppGroup
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
+                { "path": "libvirt", "namespace": "openstack" },
+                { "path": "nova", "namespace": "openstack" },
+                { "path": "neutron", "namespace": "openstack" }
+              ]
+        dependencies: [base]
+      - name: addon 
+        templateRef:
+          name: create-application
+          template: AppGroup
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
+                { "path": "horizon", "namespace": "openstack" },
+                { "path": "heat", "namespace": "openstack" },
+                { "path": "prometheus-openstack-exporter", "namespace": "openstack" }
+              ]
+        dependencies: [base,compute-kit]
+      - name: sona
+        templateRef:
+          name: create-application
+          template: AppGroup
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
+                { "path": "horizon", "namespace": "openstack" },
+              ]
+        dependencies: [addon]

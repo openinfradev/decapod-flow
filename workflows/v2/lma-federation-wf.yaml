@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-  generateName: lma-
+  generateName: lma-federation-
   namespace: argo
 spec:
   entrypoint: deploy
@@ -74,3 +74,31 @@ spec:
                 { "path": "addons", "namespace": "lma" }
               ]
         dependencies: [prepare-lma]
+
+      - name: federation
+        templateRef:
+          name: create-application
+          template: ChartGroup
+        arguments:
+          parameters: 
+          - name: chart_list
+            value: |
+              [
+                { "path": "prometheus-fed-master", "namespace": "fed" },
+                { "path": "fed-addons", "namespace": "fed" },
+                { "path": "thanos", "namespace": "fed" }
+              ]
+        dependencies: [prometheus,logging]
+
+      - name: grafana
+        templateRef:
+          name: create-application
+          template: ChartGroup
+        arguments:
+          parameters: 
+          - name: chart_list
+            value: |
+              [
+                { "path": "grafana", "namespace": "fed" }
+              ]
+        dependencies: [federation]
