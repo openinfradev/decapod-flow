@@ -14,8 +14,6 @@ spec:
       value: "admin"
     - name: argo_password
       value: "password"
-    - name: target_server
-      value: "https://kubernetes.default.svc"
   templates:
   - name: configuration
     activeDeadlineSeconds: 120
@@ -47,5 +45,3 @@ spec:
         value: "{{workflow.parameters.argo_password}}"
       - name: REPO
         value: "{{workflow.parameters.repository_url}}"
-      - name: TARGET_SERVER
-        value: "{{workflow.parameters.target_server}}"
