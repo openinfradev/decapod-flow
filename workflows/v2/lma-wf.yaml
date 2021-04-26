@@ -8,7 +8,7 @@ spec:
   arguments:
     parameters:
     - name: site_name
-      value: "hanu-deploy-apps"
+      value: "hanu-reference"
     - name: app_name
       value: "lma"
   templates:

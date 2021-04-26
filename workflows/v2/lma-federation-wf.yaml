@@ -8,7 +8,7 @@ spec:
   arguments:
     parameters:
     - name: site_name
-      value: "hanu-deploy-apps"
+      value: "hanu-reference"
     - name: app_name
       value: "lma"
   templates:
@@ -78,10 +78,10 @@ spec:
       - name: federation
         templateRef:
           name: create-application
-          template: ChartGroup
+          template: AppGroup
         arguments:
           parameters: 
-          - name: chart_list
+          - name: list
             value: |
               [
                 { "path": "prometheus-fed-master", "namespace": "fed" },
@@ -93,10 +93,10 @@ spec:
       - name: grafana
         templateRef:
           name: create-application
-          template: ChartGroup
+          template: AppGroup
         arguments:
           parameters: 
-          - name: chart_list
+          - name: list
             value: |
               [
                 { "path": "grafana", "namespace": "fed" }
