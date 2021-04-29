@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: service-mesh-
+  namespace: argo
+spec:
+  entrypoint: deploy
+  arguments:
+    parameters:
+    - name: site_name
+      value: "hanu-reference"
+    - name: app_name
+      value: "service-mesh"
+  templates:
+  - name: deploy
+    dag:
+      tasks:
+      - name: operator
+        templateRef:
+          name: create-application
+          template: AppGroup
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
+                { "path": "istio-operator", "namespace": "istio-system" },
+                { "path": "jaeger-operator", "namespace": "lma" }
+              ]
+        dependencies: []
+      - name: resource
+        templateRef:
+          name: create-application
+          template: AppGroup
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
+                { "path": "kiali-operator", "namespace": "istio-system" },
+                { "path": "service-mesh-controlplane", "namespace": "istio-system" },
+                { "path": "service-mesh-gateway", "namespace": "istio-system" }
+              ]
+        dependencies: [operator]

@@ -1,0 +1,62 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: create-application
+spec:
+  arguments:
+    parameters:
+    - name: site_name
+      value: "hanu-deploy-apps"
+    - name: app_name
+      value: "lma"
+  templates:
+  - name: createApp
+    inputs:
+      parameters:
+      - name: path
+      - name: namespace
+    activeDeadlineSeconds: 900
+    container:
+      name: 'create'
+      image: docker.io/sktdev/argocd:latest
+      command:
+      - /bin/bash
+      - -c
+      - |
+        # log into Argo CD server
+        ./argocd login $ARGO_SERVER --insecure --username $ARGO_USERNAME --password $ARGO_PASSWORD
+
+        # check if app already exists.
+        ./argocd app get $PATH 
+        if [[ $? -ne 0 ]]; then
+          # create new application if not exists.
+          ./argocd app create $PATH --repo $REPO --path $SITE_NAME/$APP_NAME/$PATH --dest-namespace $NAMESPACE --dest-name $SITE_NAME --directory-recurse
+        fi
+
+        ./argocd app sync $PATH --async
+        ./argocd app wait $PATH --health
+      envFrom:
+        - secretRef:
+            name: "decapod-argocd-config"
+      env:
+        - name: PATH
+          value: "{{inputs.parameters.path}}"
+        - name: SITE_NAME
+          value: "{{workflow.parameters.site_name}}"
+        - name: APP_NAME
+          value: "{{workflow.parameters.app_name}}"
+        - name: NAMESPACE
+          value: "{{inputs.parameters.namespace}}"
+
+  - name: AppGroup
+    inputs:
+      parameters:
+      - name: list
+    steps:
+    - - name: "InstallAppGroup"
+        template: createApp
+        arguments:
+          parameters:
+          - {name: path, value: "{{item.path}}"}
+          - {name: namespace, value: "{{item.namespace}}"}
+        withParam: "{{inputs.parameters.list}}"

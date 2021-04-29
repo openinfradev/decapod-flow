@@ -1,0 +1,104 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: lma-federation-
+  namespace: argo
+spec:
+  entrypoint: deploy
+  arguments:
+    parameters:
+    - name: site_name
+      value: "hanu-reference"
+    - name: app_name
+      value: "lma"
+  templates:
+  - name: deploy
+    dag:
+      tasks:
+      - name: operator
+        templateRef:
+          name: create-application
+          template: AppGroup
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
+                { "path": "prometheus-operator", "namespace": "lma" },
+                { "path": "eck-operator", "namespace": "elastic-system" },
+                { "path": "fluentbit-operator", "namespace": "lma" }
+              ]
+        dependencies: []
+      - name: logging
+        templateRef:
+          name: create-application
+          template: AppGroup
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
+                { "path": "eck-resource", "namespace": "lma" },
+                { "path": "fluentbit", "namespace": "lma" },
+                { "path": "kubernetes-event-exporter", "namespace": "lma" }
+              ]
+        dependencies: [operator]
+      - name: prepare-lma
+        templateRef:
+          name: create-application
+          template: AppGroup
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
+                { "path": "thanos-config", "namespace": "lma" }
+              ]
+        dependencies: [operator]
+
+      - name: prometheus
+        templateRef:
+          name: create-application
+          template: AppGroup
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
+                { "path": "prometheus", "namespace": "lma" },
+                { "path": "kube-state-metrics", "namespace": "lma" },
+                { "path": "prometheus-process-exporter", "namespace": "lma" },
+                { "path": "prometheus-pushgateway", "namespace": "lma" },
+                { "path": "prometheus-node-exporter", "namespace": "lma" },
+                { "path": "prometheus-adapter", "namespace": "lma" },
+                { "path": "addons", "namespace": "lma" }
+              ]
+        dependencies: [prepare-lma]
+
+      - name: federation
+        templateRef:
+          name: create-application
+          template: AppGroup
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
+                { "path": "prometheus-fed-master", "namespace": "fed" },
+                { "path": "fed-addons", "namespace": "fed" },
+                { "path": "thanos", "namespace": "fed" }
+              ]
+        dependencies: [prometheus,logging]
+
+      - name: grafana
+        templateRef:
+          name: create-application
+          template: AppGroup
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
+                { "path": "grafana", "namespace": "fed" }
+              ]
+        dependencies: [federation]

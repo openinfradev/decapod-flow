@@ -1,0 +1,47 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: prepare-argocd
+spec:
+  startpoint: configuration
+  arguments:
+    parameters:
+    - name: repository_url
+      value: "https://github.com/openinfradev/decapod-site-cd"
+    - name: argo_server
+      value: "192.168.97.192:30080"
+    - name: argo_username
+      value: "admin"
+    - name: argo_password
+      value: "password"
+  templates:
+  - name: configuration
+    activeDeadlineSeconds: 120
+    container:
+      name: 'config'
+      image: k8s.gcr.io/hyperkube:v1.18.8
+      command:
+      - /bin/bash
+      - -c
+      - |
+        kubectl get secret decapod-argocd-config -nargo
+
+        if [[ $? =~ 0 ]]; then 
+          kubectl delete secret decapod-argocd-config -nargo
+        fi
+
+        kubectl create secret generic decapod-argocd-config -nargo \
+        --from-literal=ARGO_SERVER=$ARGO_SERVER \
+        --from-literal=ARGO_USERNAME=$ARGO_USERNAME \
+        --from-literal=ARGO_PASSWORD=$ARGO_PASSWORD \
+        --from-literal=REPO=$REPO
+
+      env:
+      - name: ARGO_SERVER
+        value: "{{workflow.parameters.argo_server}}"
+      - name: ARGO_USERNAME
+        value: "{{workflow.parameters.argo_username}}"
+      - name: ARGO_PASSWORD
+        value: "{{workflow.parameters.argo_password}}"
+      - name: REPO
+        value: "{{workflow.parameters.repository_url}}"
