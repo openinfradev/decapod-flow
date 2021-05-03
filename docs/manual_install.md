@@ -11,8 +11,8 @@ Please see [Argo Quickstart](https://github.com/argoproj/argo/blob/master/README
 get [Argo CLI](https://github.com/argoproj/argo/releases/tag/v2.12.3).
 
 
-### Helm Operator
-Please see [Helm Operator Quickstart](https://github.com/fluxcd/helm-operator/blob/master/docs/get-started/quickstart.md).
+### Argo CD
+Please see [Argo CD Quickstart](https://argoproj.github.io/argo-cd/getting_started/).
 
 
 ### Workflow
@@ -32,5 +32,5 @@ helmrelease
 
 Run Workflow and check your argo UI.
 ```console
-$ argo submit decapod-flow/workflows/openstack-infra-wf.tpl
+$ argo submit decapod-flow/workflows/v2/lma-federation-wf.tpl
 ```
