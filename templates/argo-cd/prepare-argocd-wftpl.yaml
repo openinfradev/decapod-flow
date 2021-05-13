@@ -7,7 +7,7 @@ spec:
   arguments:
     parameters:
     - name: repository_url
-      value: "https://github.com/openinfradev/decapod-site-cd"
+      value: "https://github.com/openinfradev/decapod-manifests"
     - name: argo_server
       value: "192.168.97.192:30080"
     - name: argo_username
