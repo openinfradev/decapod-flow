@@ -11,6 +11,8 @@ spec:
       value: "hanu-reference"
     - name: app_name
       value: "openstack"
+    - name: repository_url
+      value: "https://github.com/openinfradev/decapod-manifests"
   templates:
   - name: deploy
     dag:
