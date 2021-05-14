@@ -9,6 +9,8 @@ spec:
       value: "hanu-deploy-apps"
     - name: app_name
       value: "lma"
+    - name: repository_url
+      value: "https://github.com/openinfradev/decapod-manifests"
   templates:
   - name: createApp
     inputs:
@@ -47,6 +49,8 @@ spec:
           value: "{{workflow.parameters.app_name}}"
         - name: NAMESPACE
           value: "{{inputs.parameters.namespace}}"
+        - name: REPO
+          value: "{{workflow.parameters.repository_url}}"
 
   - name: AppGroup
     inputs:
