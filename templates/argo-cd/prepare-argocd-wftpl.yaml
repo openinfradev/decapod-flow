@@ -3,7 +3,7 @@ kind: WorkflowTemplate
 metadata:
   name: prepare-argocd
 spec:
-  startpoint: configuration
+  entrypoint: preparation
   arguments:
     parameters:
     - name: argo_server
@@ -40,3 +40,47 @@ spec:
         value: "{{workflow.parameters.argo_username}}"
       - name: ARGO_PASSWORD
         value: "{{workflow.parameters.argo_password}}"
+
+  - name: createProject
+    container:
+      name: create
+      image: 'docker.io/sktdev/argocd:latest'
+      command:
+        - /bin/bash
+        - '-c'
+        - >
+          ./argocd login $ARGO_SERVER --insecure --username $ARGO_USERNAME
+          --password $ARGO_PASSWORD
+
+
+          ./argocd proj create lma --upsert
+          ./argocd proj allow-cluster-resource lma '*' '*'
+          ./argocd proj add-destination lma '*' '*'
+          ./argocd proj add-source lma '*'
+
+          ./argocd proj create service-mesh --upsert 
+          ./argocd proj allow-cluster-resource service-mesh '*' '*'
+          ./argocd proj add-destination service-mesh '*' '*'
+          ./argocd proj add-source service-mesh '*'
+
+          ./argocd proj create openstack --upsert 
+          ./argocd proj allow-cluster-resource openstack '*' '*'
+          ./argocd proj add-destination openstack '*' '*'
+          ./argocd proj add-source openstack '*'
+      env:
+        - name: ARGO_SERVER
+          value: '{{workflow.parameters.argo_server}}'
+        - name: ARGO_USERNAME
+          value: '{{workflow.parameters.argo_username}}'
+        - name: ARGO_PASSWORD
+          value: '{{workflow.parameters.argo_password}}'
+    activeDeadlineSeconds: 120
+
+  - name: preparation
+    steps:
+      - - name: configuration
+          template: configuration
+          arguments: {}
+      - - name: createProject
+          template: createProject
+          arguments: {}
