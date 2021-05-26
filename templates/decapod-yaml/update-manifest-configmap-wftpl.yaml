@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: update-manifest-configmap
+spec:
+  entrypoint: startpoint
+  arguments:
+    parameters:
+    - name: tacoplay_dir
+      value: "/home/taco/tacoplay"
+    - name: site_name
+      value: "tacoplay_inventory_site"
+  volumes:
+  - name: workdir
+    hostPath:
+      path: "{{workflow.parameters.tacoplay_dir}}"
+      type: Directory
+  templates:
+  - name: startpoint
+    steps:
+    - - name: "update"
+        template: update-manifest-configmap
+        arguments:
+          parameters:
+          - { name: site_name, value: "{{workflow.parameters.site_name}}" }
+
+  - name: update-manifest-configmap
+    inputs:
+      parameters:
+      - name: site_name
+    container:
+      name: 'update'
+      image: k8s.gcr.io/hyperkube:v1.17.6
+      command:
+      - /bin/bash
+      - -c
+      - |
+        set -xe
+        cd /mnt/workdir
+        #find . -regex ".*$SITE_NAME.*\/.*-manifest.yaml" | while read -r path ; do
+        for file in $(ls inventory/$SITE_NAME/*-manifest.yaml); do
+          echo $file
+          NAME=$(echo $file | sed -E 's/.*\/(.*)-manifest.yaml/\1/')
+          kubectl create configmap "$NAME" --from-file=$file --dry-run -oyaml | kubectl apply -f-
+        done 
+      env:
+      - name: SITE_NAME
+        value: "{{inputs.parameters.site_name}}"
+      volumeMounts:
+      - name: workdir
+        mountPath: /mnt/workdir
+
