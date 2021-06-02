@@ -83,7 +83,6 @@ spec:
               [
                 "prometheus-fed-master",
                 "fed-addons",
-                "thanos"
               ]
         dependencies: [prometheus,logging]
       - name: grafana
