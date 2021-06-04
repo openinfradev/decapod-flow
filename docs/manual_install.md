@@ -27,10 +27,14 @@ Also, you can check the workflow template in Argo UI.
 $ argo template list
 
 NAME
-helmrelease
+lma
+lma-federation
+service-mesh
+openstack-components
+openstack-infra
 ```
 
 Run Workflow and check your argo UI.
 ```console
-$ argo submit decapod-flow/workflows/v2/lma-federation-wf.tpl
+$ argo submit --from wftmpl/lma-federation -nargo
 ```
