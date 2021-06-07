@@ -21,6 +21,7 @@ spec:
     container:
       name: 'create'
       image: docker.io/sktdev/argocd:latest
+      imagePullPolicy: IfNotPresent
       command:
       - /bin/bash
       - -c
