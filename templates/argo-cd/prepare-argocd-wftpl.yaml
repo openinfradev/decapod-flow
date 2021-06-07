@@ -18,6 +18,7 @@ spec:
     container:
       name: 'config'
       image: k8s.gcr.io/hyperkube:v1.18.8
+      imagePullPolicy: IfNotPresent
       command:
       - /bin/bash
       - -c
@@ -45,10 +46,11 @@ spec:
     container:
       name: create
       image: 'docker.io/sktdev/argocd:latest'
+      imagePullPolicy: IfNotPresent
       command:
         - /bin/bash
         - '-c'
-        - >
+        - |
           ./argocd login $ARGO_SERVER --insecure --username $ARGO_USERNAME
           --password $ARGO_PASSWORD
 
