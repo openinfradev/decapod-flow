@@ -1,0 +1,180 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: delete-servicemesh-template
+  namespace: argo
+spec:
+  entrypoint: delete-start
+  arguments:
+    parameters:
+    - name: iop_controlplane_name
+      value: "istio-controlplane"   ## Required parameter. "istio-controlplane"
+    - name: iop_gateway_name
+      value: "istio-gateway"   ## Required parameter. "istio-gateway"
+    - name: revision
+      value: "1-9-1"   ## Required parameter. "1-9-1"
+    - name: namespace
+      value: "istio-system"   ## Required parameter. "istio-system"
+    - name: kube_version
+      value: "v1.18.6"
+    - name: istioctl_version
+      value: "1.10.0"
+    - name: operator_install_method
+      value: "helm_chart" ## Required parameter. "helm_chart", "istioctl"
+  templates:
+  - name: delete-start
+    steps:
+    - - name: delete-kuberentes-gateway
+        template: delete-kubernetes-resources
+        arguments:
+          parameters:
+          - name: component_name
+            value: "{{workflow.parameters.iop_gateway_name}}"
+          - name: component_type
+            value: "gateway"
+    - - name: delete-kubernetes-controlplane
+        template: delete-kubernetes-resources
+        arguments:
+          parameters:
+          - name: component_name
+            value: "{{workflow.parameters.iop_controlplane_name}}"
+          - name: component_type
+            value: "controlplane"
+    - - name: delete-istio-operator
+        template: delete-istio-operator
+        arguments:
+          parameters:
+          - name: component_type
+            value: "controlplane"
+          - name: revision
+            value: "{{workflow.parameters.revision}}"
+          - name: operator_install_method
+            value: "{{workflow.parameters.operator_install_method}}"
+  - name: delete-kubernetes-resources
+    inputs:
+      parameters:
+      - name: component_name
+      - name: component_type
+    container:
+      name: 'delete-kubernetes-resources'
+      image: k8s.gcr.io/hyperkube:{{workflow.parameters.kube_version}}
+      command:
+      - /bin/bash
+      - -c
+      - |
+        function log() {
+          level=$1
+          msg=$2
+          date=$(date '+%F %H:%M:%S')
+          echo "[$date] $level     $msg"
+        }
+        function deleteGateway() {
+          log "INFO" "deleteGateway() called!"
+          log "INFO" "REVISION = [${REVISION}]"
+          log "INFO" "COMPONENT_NAME = [${COMPONENT_NAME}]"
+          log "INFO" "NAMESPACE = [${NAMESPACE}]"
+          LABELS="istio.io/rev=${REVISION},operator.istio.io/component=IngressGateways"
+          kubectl patch istiooperators ${COMPONENT_NAME} -n ${NAMESPACE} --type merge -p '{"metadata":{"finalizers": [null]}}'
+          kubectl delete istiooperators ${COMPONENT_NAME} -n ${NAMESPACE}
+          kubectl delete deployments -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete services -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete hpa -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete poddisruptionbudgets -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete serviceaccounts -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete rolebindings -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete roles -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete helmreleases service-mesh-gateway -n default
+        }
+        function deleteControlplane() {
+          log "INFO" "deleteControlplane() called!"
+          log "INFO" "REVISION = [${REVISION}]"
+          log "INFO" "COMPONENT_NAME = [${COMPONENT_NAME}]"
+          log "INFO" "NAMESPACE = [${NAMESPACE}]"
+          LABELS="istio.io/rev=${REVISION},operator.istio.io/component=Pilot"
+          kubectl patch istiooperators ${COMPONENT_NAME} -n ${NAMESPACE} --type merge -p '{"metadata":{"finalizers": [null]}}'
+          kubectl delete istiooperators ${COMPONENT_NAME} -n ${NAMESPACE}
+          kubectl delete deployments -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete services -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete hpa -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete configmaps -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete poddisruptionbudgets -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete envoyfilters -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete mutatingwebhookconfigurations -l ${LABELS}
+          kubectl delete serviceaccounts -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete rolebindings -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete roles -n ${NAMESPACE} -l ${LABELS}
+          kubectl delete clusterrolebindings -l ${LABELS}
+          kubectl delete clusterroles -l ${LABELS}
+          kubectl delete helmreleases service-mesh-controlplane -n default
+        }
+
+        # delete Kubernetes resources
+        if [[ ! -z "$COMPONENT_NAME" ]]; then
+          if [[ ${COMPONENT_TYPE} =~ controlplane ]]; then
+            log "INFO" "delete istio Controlplane"
+            deleteControlplane
+          elif [[ ${COMPONENT_TYPE} =~ gateway ]]; then
+            log "INFO" "delete istio Gateway"
+            deleteGateway
+          else
+            log "ERROR" "${COMPONENT_TYPE} does'nt exist."
+            exit 1
+          fi
+        fi
+        
+        log "INFO" "${COMPONENT_NAME} successfully deleted."
+      env:
+      - name: COMPONENT_NAME
+        value: "{{inputs.parameters.component_name}}"
+      - name: COMPONENT_TYPE
+        value: "{{inputs.parameters.component_type}}"
+      - name: REVISION
+        value: "{{workflow.parameters.revision}}"
+      - name: NAMESPACE
+        value: "{{workflow.parameters.namespace}}"
+    retryStrategy:
+      limit: 2
+    activeDeadlineSeconds: 900
+  - name: delete-istio-operator
+    inputs:
+      parameters:
+      - name: component_type
+      - name: revision
+      - name: operator_install_method
+    container:
+      name: 'delete-istio-operator'
+      image: istio/istioctl:{{workflow.parameters.istioctl_version}}
+      command:
+      - /bin/bash
+      - -c
+      - |
+        function log() {
+          level=$1
+          msg=$2
+          date=$(date '+%F %H:%M:%S')
+          echo "[$date] $level     $msg"
+        }
+
+        # delete istiooperators
+        if [[ ${COMPONENT_TYPE} =~ controlplane ]]; then
+          if [[ ${METHOD} =~ istioctl ]]; then
+            log "INFO" "delete istiooperators"
+            istioctl operator remove --revision ${REVISION}
+            log "INFO" "istiooperators ${REVISION} successfully deleted."
+          fi
+        else
+          log "INFO" "Only controlplane can be deleted."
+          exit 0
+        fi
+      env:
+      - name: COMPONENT_TYPE
+        value: "{{inputs.parameters.component_type}}"
+      - name: REVISION
+        value: "{{inputs.parameters.revision}}"
+      - name: METHOD
+        value: "{{inputs.parameters.operator_install_method}}"
+    retryStrategy:
+      limit: 2
+    activeDeadlineSeconds: 900
+  
+  

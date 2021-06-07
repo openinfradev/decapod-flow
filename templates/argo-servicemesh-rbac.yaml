@@ -1,0 +1,36 @@
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: argo-servicemesh-crb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argo-servicemesh-cr
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: argo
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argo-servicemesh-cr
+rules:
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - "*"
+- apiGroups:
+  - install.istio.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - create
+  - get
+  - delete
+  - list
+  - patch
