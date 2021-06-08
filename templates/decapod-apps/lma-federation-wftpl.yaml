@@ -86,9 +86,9 @@ spec:
           - name: list
             value: |
               [
-                { "path": "prometheus-fed-master", "namespace": "fed" },
-                { "path": "fed-addons", "namespace": "fed" },
-                { "path": "thanos", "namespace": "fed" }
+                { "path": "prometheus-fed-master", "namespace": "lma" },
+                { "path": "fed-addons", "namespace": "lma" },
+                { "path": "thanos", "namespace": "lma" }
               ]
         dependencies: [prometheus,logging]
 
@@ -101,6 +101,6 @@ spec:
           - name: list
             value: |
               [
-                { "path": "grafana", "namespace": "fed" }
+                { "path": "grafana", "namespace": "lma" }
               ]
         dependencies: [federation]
