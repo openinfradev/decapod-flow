@@ -82,7 +82,7 @@ spec:
             value: |
               [
                 "prometheus-fed-master",
-                "fed-addons",
+                "fed-addons"
               ]
         dependencies: [prometheus,logging]
       - name: grafana
