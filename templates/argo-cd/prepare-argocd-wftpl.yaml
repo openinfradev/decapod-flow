@@ -2,6 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
   name: prepare-argocd
+  namespace: argo
 spec:
   entrypoint: preparation
   arguments:
@@ -51,24 +52,23 @@ spec:
         - /bin/bash
         - '-c'
         - |
-          ./argocd login $ARGO_SERVER --insecure --username $ARGO_USERNAME
+          ./argocd login $ARGO_SERVER --insecure --username $ARGO_USERNAME \
           --password $ARGO_PASSWORD
 
+          ./argocd proj get lma
+          if [[ $? != 0 ]]; then
+            ./argocd proj create lma --dest "*,*" --src "*" --allow-cluster-resource "*/*"
+          fi
 
-          ./argocd proj create lma --upsert
-          ./argocd proj allow-cluster-resource lma '*' '*'
-          ./argocd proj add-destination lma '*' '*'
-          ./argocd proj add-source lma '*'
+          ./argocd proj get service-mesh
+          if [[ $? != 0 ]]; then
+            ./argocd proj create service-mesh --dest "*,*" --src "*" --allow-cluster-resource "*/*"
+          fi
 
-          ./argocd proj create service-mesh --upsert 
-          ./argocd proj allow-cluster-resource service-mesh '*' '*'
-          ./argocd proj add-destination service-mesh '*' '*'
-          ./argocd proj add-source service-mesh '*'
-
-          ./argocd proj create openstack --upsert 
-          ./argocd proj allow-cluster-resource openstack '*' '*'
-          ./argocd proj add-destination openstack '*' '*'
-          ./argocd proj add-source openstack '*'
+          ./argocd proj get openstack
+          if [[ $? != 0 ]]; then
+            ./argocd proj create openstack --dest "*,*" --src "*" --allow-cluster-resource "*/*"
+          fi
       env:
         - name: ARGO_SERVER
           value: '{{workflow.parameters.argo_server}}'

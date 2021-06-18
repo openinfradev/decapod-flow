@@ -13,6 +13,8 @@ spec:
       value: "service-mesh"
     - name: repository_url
       value: "https://github.com/openinfradev/decapod-manifests"
+    - name: revision
+      value: main
   templates:
   - name: deploy
     dag:
