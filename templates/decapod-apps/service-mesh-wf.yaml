@@ -10,7 +10,7 @@ spec:
     - name: site_name
       value: "hanu-reference"
     - name: app_name
-      value: "service-mesh"
+      value: "servicemesh"
     - name: repository_url
       value: "https://github.com/openinfradev/decapod-manifests"
     - name: revision
