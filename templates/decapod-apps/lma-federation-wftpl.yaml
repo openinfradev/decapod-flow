@@ -87,7 +87,6 @@ spec:
             value: |
               [
                 { "path": "prometheus-fed-master", "namespace": "lma" },
-                { "path": "fed-addons", "namespace": "lma" },
                 { "path": "thanos", "namespace": "lma" }
               ]
         dependencies: [prometheus,logging]
