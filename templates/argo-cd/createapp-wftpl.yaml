@@ -36,6 +36,7 @@ spec:
           ./argocd app create $PATH --repo $REPO --path $SITE_NAME/$APP_NAME/$PATH --dest-namespace $NAMESPACE --dest-name $SITE_NAME --project $APP_NAME --directory-recurse
         fi
 
+        ./argocd app set $PATH --sync-policy automated --auto-prune
         ./argocd app sync $PATH --async
         ./argocd app wait $PATH --health
       envFrom:
