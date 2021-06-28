@@ -57,6 +57,8 @@ spec:
           value: "{{inputs.parameters.namespace}}"
         - name: REPO
           value: "{{workflow.parameters.repository_url}}"
+        - name: REVISION
+          value: "{{workflow.parameters.revision}}"
 
   - name: AppGroup
     inputs:
