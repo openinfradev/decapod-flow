@@ -37,7 +37,7 @@ spec:
         ./argocd app get $PATH 
         if [[ $? -ne 0 ]]; then
           # create new application if not exists.
-          ./argocd app create $PATH --repo $REPO --revision $REVISION --path $SITE_NAME/$APP_NAME/$PATH --dest-namespace $NAMESPACE --dest-name $SITE_NAME --project $APP_NAME --directory-recurse
+          ./argocd app create $PATH --repo $REPO --revision $REVISION --path $SITE_NAME/$APP_NAME/$PATH --dest-namespace $NAMESPACE --dest-name $SITE_NAME --project $APP_NAME --label app=$APP_NAME --directory-recurse
         fi
 
         ./argocd app set $PATH --sync-policy automated --auto-prune
