@@ -28,7 +28,7 @@ spec:
       resources:
         requests:
           storage: 10Mi
-      storageClassName: rbd
+      storageClassName: taco-storage
   templates:
   - name: startpoint
     steps:
