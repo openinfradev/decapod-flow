@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: issue-access-token
+  namespace: argo
+spec:
+  entrypoint: issue-token
+  arguments:
+    parameters:
+    - name: token_name
+      value: "tks-admin"
+  templates:
+  - name: issue-token
+    activeDeadlineSeconds: 120
+    container:
+      name: 'config'
+      image: k8s.gcr.io/hyperkube:v1.18.8
+      imagePullPolicy: IfNotPresent
+      command:
+      - /bin/bash
+      - -c
+      - |
+        kubectl create role $TOKEN_NAME --verb=list,update,delete --resource=workflows.argoproj.io \
+        --verb=list,update,delete --resource=workflowtemplates.argoproj.io \
+        -nargo
+        kubectl create sa $TOKEN_NAME
+
+        kubectl create rolebinding $TOKEN_NAME --role=$TOKEN_NAME --serviceaccount=argo:$TOKEN_NAME -nargo
+        
+        SECRET=$(kubectl get sa $TOKEN_NAME -o=jsonpath='{.secrets[0].name}')
+        ARGO_TOKEN="Bearer $(kubectl get secret $SECRET -o=jsonpath='{.data.token}' | base64 --decode)"
+        echo "Created new token!"
+        echo $ARGO_TOKEN
+      env:
+      - name: TOKEN_NAME
+        value: "{{workflow.parameters.token_name}}"
