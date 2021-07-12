@@ -26,6 +26,7 @@ rules:
   - watch
   - patch
   - create
+  - delete
   - list
 - apiGroups:
   - ""
