@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
-  name: lma-federation
+  name: tks-lma-federation
   namespace: argo
 spec:
   entrypoint: deploy
@@ -30,6 +30,8 @@ spec:
             value: "6abead61-ff2a-4af4-8f41-d2c44c745de7"
           - name: appgroupid
             value: "abbead61-ff2a-4af4-8f41-d2c44c745de7"
+          - name: clusterep
+            value: ""
           # 3-ways for transfer information (about applications)
           #   1. eplist 변수에 json 형태로 어플리케이션별 모든 url 제공 "{"1":"127.0.0.1","2":"127.0.0.1:10232"}"
           #   2. clusterep에 클러스터에 대한 ip혹은 dns를 명시하고 epportlist변수에 어플리케이션별 포트를 제공 "{"1":"30000","2":"30005"}"
