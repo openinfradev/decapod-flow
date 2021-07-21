@@ -30,7 +30,7 @@ spec:
       - -c
       - |
         # log into Argo CD server
-        ./argocd login $ARGO_SERVER --insecure --username $ARGO_USERNAME \
+        ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
         --password $ARGO_PASSWORD
 
         # check if app already exists.
