@@ -155,7 +155,7 @@ spec:
               date=$(date '+%F %H:%M:%S')
               echo "[$date] $level     $msg"
             }
-            ./argocd login $ARGO_SERVER --insecure --username $ARGO_USERNAME \
+            ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
             --password $ARGO_PASSWORD
 
             ./argocd app list -p $APP_NAME -o name | xargs ./argocd app delete -y

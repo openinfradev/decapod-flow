@@ -176,7 +176,7 @@ spec:
           - /bin/bash
           - '-c'
           - |
-            ./argocd login $ARGO_SERVER --insecure --username $ARGO_USERNAME \
+            ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
             --password $ARGO_PASSWORD
 
             ./argocd app sync -l app=service-mesh
