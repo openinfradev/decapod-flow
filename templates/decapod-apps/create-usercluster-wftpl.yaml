@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: create-usercluster
+  namespace: argo
+spec:
+  entrypoint: deploy
+  arguments:
+    parameters:
+    - name: site_name
+      # value: "YOUR_CLUSTER_NAME"
+      value: "011b88fa-4d53-439f-9336-67845f994051"
+    - name: tks_admin
+      value: "tks-admin"
+    - name: app_name
+      value: "tks-cluster"
+    - name: repository_url
+      value: "https://github.com/tks-management/011b88fa-4d53-439f-9336-67845f994051-manifests.git"
+      # value: "https://github.com/tks-management/YOUR_CONTRACT_ID-manifests"
+    - name: revision
+      value: main
+  templates:
+  - name: deploy
+    dag:
+      tasks:
+        - name: k8s-by-capi
+          templateRef:
+            name: create-application
+            template: AppGroupOnAdmin
+          arguments:
+            parameters: 
+            - name: list
+              value: |
+                [
+                  { "path": "cluster-api-aws", "namespace": "default" }
+                ]
+          dependencies: []
+        - name: ready-for-cni-and-csi
+          templateRef:
+            name: create-application
+            template: AppGroup
+          arguments:
+            parameters: 
+            - name: list
+              value: |
+                [
+                  { "path": "ingress-nginx", "namespace": "taco-system" },
+                  { "path": "kubed", "namespace": "taco-system" },
+                  { "path": "kubernetes-addons", "namespace": "taco-system" }
+                ]
+          dependencies: [k8s-by-capi]

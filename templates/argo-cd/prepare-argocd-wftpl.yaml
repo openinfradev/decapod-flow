@@ -8,7 +8,8 @@ spec:
   arguments:
     parameters:
     - name: argo_server
-      value: "decapod-argocd-server.argo.svc:80"
+      value: "argo-cd-argocd-server.argo.svc:80"
+      # value: "decapod-argocd-server.argo.svc:80"
     - name: argo_username
       value: "admin"
     - name: argo_password
@@ -69,6 +70,12 @@ spec:
           if [[ $? != 0 ]]; then
             ./argocd proj create openstack --dest "*,*" --src "*" --allow-cluster-resource "*/*"
           fi
+
+          ./argocd proj get tks-cluster
+          if [[ $? != 0 ]]; then
+            ./argocd proj create tks-cluster --dest "*,*" --src "*" --allow-cluster-resource "*/*"
+          fi
+
       env:
         - name: ARGO_SERVER
           value: '{{workflow.parameters.argo_server}}'

@@ -20,29 +20,36 @@ spec:
       parameters:
       - name: path
       - name: namespace
+      - name: target_cluster
     activeDeadlineSeconds: 900
     container:
       name: 'create'
-      image: docker.io/sktdev/argocd:latest
+      image: ghcr.io/openinfradev/argocd-cli:v2.0.1
       imagePullPolicy: IfNotPresent
       command:
       - /bin/bash
       - -c
       - |
+        CD_APP=${SITE_NAME:0:8}-$PATH
+        echo "argo-cd application name: $CD_APP"
         # log into Argo CD server
         ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
         --password $ARGO_PASSWORD
 
         # check if app already exists.
-        ./argocd app get $PATH 
+        ./argocd app get $CD_APP 
         if [[ $? -ne 0 ]]; then
+          echo "$CD_APP application is not in server"
           # create new application if not exists.
-          ./argocd app create $PATH --repo $REPO --revision $REVISION --path $SITE_NAME/$APP_NAME/$PATH --dest-namespace $NAMESPACE --dest-name $SITE_NAME --project $APP_NAME --label app=$APP_NAME --directory-recurse
+          ./argocd app create $CD_APP --repo $REPO --revision $REVISION --path $SITE_NAME/$TACO_APP/$PATH --dest-namespace $NAMESPACE --dest-name $TARGET_CLUSTER --project $TACO_APP --label app=$TACO_APP --directory-recurse
+          if [[ $? -ne 0 ]]; then
+            exit $?
+          fi
         fi
 
-        ./argocd app set $PATH --sync-policy automated --auto-prune
-        ./argocd app sync $PATH --async
-        ./argocd app wait $PATH --health
+        ./argocd app set $CD_APP --sync-policy automated --auto-prune
+        ./argocd app sync $CD_APP --async
+        ./argocd app wait $CD_APP --health
       envFrom:
         - secretRef:
             name: "decapod-argocd-config"
@@ -51,7 +58,9 @@ spec:
           value: "{{inputs.parameters.path}}"
         - name: SITE_NAME
           value: "{{workflow.parameters.site_name}}"
-        - name: APP_NAME
+        - name: TARGET_CLUSTER
+          value: "{{inputs.parameters.target_cluster}}"
+        - name: TACO_APP
           value: "{{workflow.parameters.app_name}}"
         - name: NAMESPACE
           value: "{{inputs.parameters.namespace}}"
@@ -71,4 +80,19 @@ spec:
           parameters:
           - {name: path, value: "{{item.path}}"}
           - {name: namespace, value: "{{item.namespace}}"}
+          - {name: target_cluster, value: "{{workflow.parameters.site_name}}"}
+        withParam: "{{inputs.parameters.list}}"
+
+  - name: AppGroupOnAdmin
+    inputs:
+      parameters:
+      - name: list
+    steps:
+    - - name: "InstallAppGroup"
+        template: createApp
+        arguments:
+          parameters:
+          - {name: path, value: "{{item.path}}"}
+          - {name: namespace, value: "{{item.namespace}}"}
+          - {name: target_cluster, value: "{{workflow.parameters.tks_admin}}"}
         withParam: "{{inputs.parameters.list}}"
