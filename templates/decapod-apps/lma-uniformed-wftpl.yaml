@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
-  name: lma
+  name: lma-federation
   namespace: argo
 spec:
   entrypoint: deploy
@@ -78,3 +78,29 @@ spec:
                 { "path": "addons", "namespace": "lma" }
               ]
         dependencies: [prepare-lma]
+
+      - name: federation
+        templateRef:
+          name: create-application
+          template: AppGroup
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
+                { "path": "thanos", "namespace": "lma" }
+              ]
+        dependencies: [prometheus,logging]
+
+      - name: grafana
+        templateRef:
+          name: create-application
+          template: AppGroup
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
+                { "path": "grafana", "namespace": "lma" }
+              ]
+        dependencies: [federation]
