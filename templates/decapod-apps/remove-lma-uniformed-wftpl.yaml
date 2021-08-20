@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: remove-lma-federation
+  namespace: argo
+spec:
+  entrypoint: process
+  arguments:
+    parameters:
+    - name: project
+      value: "lma"
+  templates:
+  - name: process
+    steps:
+    - - name: remove
+        templateRef:
+          name: delete-project
+          template: DeleteProject
+        arguments:
+          parameters: 
+          - name: project
+            value: "{{ workflow.parameters.project }}"

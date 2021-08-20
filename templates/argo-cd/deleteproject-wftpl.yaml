@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: delete-project
+  namespace: argo
+spec:
+  arguments:
+    parameters:
+    - name: project
+      value: "lma"
+  templates:
+  - name: DeleteProject
+    inputs:
+      parameters:
+      - name: project
+    activeDeadlineSeconds: 900
+    container:
+      name: 'deleteProject'
+      image: docker.io/sktdev/argocd:latest
+      imagePullPolicy: IfNotPresent
+      command:
+      - /bin/bash
+      - -c
+      - |
+        # log into Argo CD server
+        ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
+        --password $ARGO_PASSWORD
+
+        # check if project already exists.
+        ./argocd proj get $PROJECT
+        if [[ $? -eq 0 ]]; then
+          ./argocd app list --project $PROJECT --output name | xargs argocd delete --cascade -y
+          ./argocd proj delete $PROJECT
+        else
+          echo "No such project: $PROJECT"
+          exit 1
+        fi
+      envFrom:
+        - secretRef:
+            name: "decapod-argocd-config"
+      env:
+        - name: PROJECT
+          value: "{{workflow.parameters.project}}"
