@@ -56,7 +56,8 @@ spec:
           - name: list
             value: |
               [
-                { "path": "thanos-config", "namespace": "lma" }
+                { "path": "thanos-config", "namespace": "lma" },
+                { "path": "prepare-etcd-secret", "namespace": "lma" }
               ]
         dependencies: [operator]
 
