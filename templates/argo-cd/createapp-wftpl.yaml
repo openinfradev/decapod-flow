@@ -60,12 +60,12 @@ spec:
         - name: REVISION
           value: "{{workflow.parameters.revision}}"
 
-  - name: AppGroup
+  - name: installApps
     inputs:
       parameters:
       - name: list
     steps:
-    - - name: "InstallAppGroup"
+    - - name: "InstallApps"
         template: createApp
         arguments:
           parameters:

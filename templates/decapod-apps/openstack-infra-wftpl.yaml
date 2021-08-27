@@ -22,7 +22,7 @@ spec:
       - name: operator
         templateRef:
           name: create-application
-          template: AppGroup
+          template: installApps
         arguments:
           parameters: 
           - name: list

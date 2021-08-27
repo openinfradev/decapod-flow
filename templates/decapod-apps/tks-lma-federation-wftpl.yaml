@@ -55,7 +55,7 @@ spec:
       - name: operator
         templateRef:
           name: create-application
-          template: AppGroup
+          template: installApps
         arguments:
           parameters: 
           - name: list
@@ -69,7 +69,7 @@ spec:
       - name: logging
         templateRef:
           name: create-application
-          template: AppGroup
+          template: installApps
         arguments:
           parameters: 
           - name: list
@@ -83,7 +83,7 @@ spec:
       - name: prepare-lma
         templateRef:
           name: create-application
-          template: AppGroup
+          template: installApps
         arguments:
           parameters: 
           - name: list
@@ -96,7 +96,7 @@ spec:
       - name: prometheus
         templateRef:
           name: create-application
-          template: AppGroup
+          template: installApps
         arguments:
           parameters: 
           - name: list
@@ -115,7 +115,7 @@ spec:
       - name: federation
         templateRef:
           name: create-application
-          template: AppGroup
+          template: installApps
         arguments:
           parameters: 
           - name: list
@@ -128,7 +128,7 @@ spec:
       - name: grafana
         templateRef:
           name: create-application
-          template: AppGroup
+          template: installApps
         arguments:
           parameters: 
           - name: list
