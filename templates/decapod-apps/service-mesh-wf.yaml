@@ -39,7 +39,7 @@ spec:
                     ]
             templateRef:
               name: create-application
-              template: AppGroup
+              template: installApps
             dependencies:
               - create-eck-secret
           - name: istio-controlplane
@@ -52,7 +52,7 @@ spec:
                     ]
             templateRef:
               name: create-application
-              template: AppGroup
+              template: installApps
             dependencies:
               - istio-operator
           - name: istio-gateway
@@ -65,7 +65,7 @@ spec:
                     ]
             templateRef:
               name: create-application
-              template: AppGroup
+              template: installApps
             dependencies:
               - istio-controlplane
           - name: jaeger-kiali-operator
@@ -79,7 +79,7 @@ spec:
                     ]
             templateRef:
               name: create-application
-              template: AppGroup
+              template: installApps
             dependencies:
               - istio-controlplane
           - name: servicemesh-jaeger-kiali-resource
@@ -93,7 +93,7 @@ spec:
                     ]
             templateRef:
               name: create-application
-              template: AppGroup
+              template: installApps
             dependencies:
               - jaeger-kiali-operator
           - name: grafana-prometheus-resource
@@ -108,7 +108,7 @@ spec:
                     ]
             templateRef:
               name: create-application
-              template: AppGroup
+              template: installApps
             dependencies:
               - jaeger-kiali-operator
           - name: sync-app
