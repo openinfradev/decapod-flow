@@ -15,41 +15,30 @@ spec:
       value: "hanu-app1"
     - name: repository_url
       value: "https://github.com/openinfradev/decapod-manifests"
+  volumes:
+  - name: tks-proto-vol
+    configMap:
+      name: tks-proto
   templates:
   - name: deploy
     steps:
     - - name: process
-        template: argocd
+        template: createApps
     - - name: postprocess
-        template: tks-client-epregister
+        template: updateToTksInfo
         arguments:
+          # These params should be moved to global argument? #
           parameters:
-          - name: tks
+          - name: tks_info_host
             value: "127.0.0.1"
-          - name: clusterid
+          - name: cluster_id
             value: "6abead61-ff2a-4af4-8f41-d2c44c745de7"
-          - name: appgroupid
+          - name: appgroup_id
             value: "abbead61-ff2a-4af4-8f41-d2c44c745de7"
-          - name: clusterep
-            value: ""
-          # 3-ways for transfer information (about applications)
-          #   1. eplist 변수에 json 형태로 어플리케이션별 모든 url 제공 "{"1":"127.0.0.1","2":"127.0.0.1:10232"}"
-          #   2. clusterep에 클러스터에 대한 ip혹은 dns를 명시하고 epportlist변수에 어플리케이션별 포트를 제공 "{"1":"30000","2":"30005"}"
-          #   3. clusterep에 클러스터에 대한 ip 혹은 dns를 적용하여 미리 정해진 내용을 등록하도록 유도 - 현재는 30007 포트만 prometheus sidecar 서비스로 등재
-          # (For Example)
-          # (case 1)
-          # - name: eplist
-          #   value: "{\"1\":\"127.0.0.1\",\"2\":\"127.0.0.1:10232\"}"
-          # (case 2)
-          # - name: clusterep
-          #   value: "taco.mycluster.com"
-          # - name: epportlist
-          #   value: "{"1":"30000","2":"30005"}"
-          # (case 3)
-          # - name: clusterep
-          #   value: "192.168.0.1"
+          - name: thanos_sc_ep
+            value: "thanos-sidecar.clusterX"
 
-  - name: argocd
+  - name: createApps
     dag:
       tasks:
       - name: operator
@@ -138,16 +127,209 @@ spec:
               ]
         dependencies: [federation]
 
-  - name: tks-client-epregister
+  - name: updateToTksInfo
     inputs:
       parameters:
-      - name: tks
+      - name: tks_info_host
+      - name: app_group_id
+      - name: thanos_sc_ep
+    script:
+      image: centos/python-38-centos7
+      command: ["python"]
+      env:
+      - name: PYTHONPATH
+        value: "/opt/protobuf/:/opt/rh/rh-python38/root/lib/python3.8/site-packages/:/opt/app-root/lib/python3.8/site-packages/"
+      volumeMounts:
+      - name: tks-proto-vol
+        mountPath: "/opt/protobuf"
+        readOnly: true
+      source: |
+        import subprocess
+        import sys
+
+        subprocess.check_call([sys.executable, "-m", "pip", "install",
+        "grpcio", "protobuf"])
+
+        import google.protobuf
+        import grpc
+        import info_pb2
+        import info_pb2_grpc
+        import common_pb2
+        import common_pb2_grpc
+
+        ip = "{{inputs.parameters.tks_info_host}}"
+        port = 9111 # if not specified
+        addr = "%s:%d" % (ip, port)
+        print("tks-info addr: %s" % addr)
+
+        with grpc.insecure_channel(addr) as channel:
+            cl_stub = info_pb2_grpc.ClusterInfoServiceStub(channel)
+            app_stub = info_pb2_grpc.AppInfoServiceStub(channel)
+
+            res = app_stub.UpdateAppGroupStatus(info_pb2.UpdateAppGroupStatusRequest(app_group_id="{{inputs.parameters.app_group_id}}", status=common_pb2.APP_GROUP_RUNNING))
+            print("Response code from UpdateAppGroupStaus: %d" % res.code)
+
+            res = app_stub.UpdateApp(info_pb2.UpdateAppRequest(app_group_id="{{inputs.parameters.app_group_id}}", app_type=common_pb2.PROMETHEUS, endpoint="{{inputs.parameters.thanos_sc_ep}}", metadata="{}"))
+            print("Response code from UpdateApp: %d" % res.code)
+
+         ####################################
+         # Done refactoring until this line #
+         ####################################
+
+
+  - name: CollectEndpoints
+    inputs:
+      parameters:
+      - name: tks_info_host
       - name: clusterid
       - name: appgroupid
-      - name: clusterep
-    container:
-      # run cowsay with that message input parameter as args
-      image: ghcr.io/openinfradev/ep2tks:v0.1.0
-      command: ["/app/ep2tks"]
-      args: ["-tks","{{inputs.parameters.tks}}","-clusterep","{{inputs.parameters.clusterep}}",
-        "-appgroupid","{{inputs.parameters.appgroupid}}","-clusterid","{{inputs.parameters.clusterid}}"]
+      - name: cur_endpoint
+    script:
+      image: python:alpine3.6
+      command: ["python"]
+      source: |
+        import grpc
+        import info_pb2
+        import info_pb2_grpc
+
+        endpointMap = {}
+
+        ip = {{input.parameters.tks_info_host}}
+        port = 9111 # if not specified
+
+        # change to something equivalent in python
+        addr := fmt.Sprintf("%s:%d", *ip, *port)
+ 
+        with grpc.insecure_channel(addr) as channel:
+            cl_stub = info_pb2_grpc.ClusterInfoServiceStub(channel)
+            app_stub = info_pb2_grpc.AppInfoServiceStub(channel)
+
+            res = cl_stub.GetCluster(info_pb2.GetClusterRequest(cluster_id='{{input.parameters.cluster_id}}'))
+
+            print("Response: " + res.cluster)
+            contract_id = res.cluster.contract_id
+            csp_id = res.cluster.csp_id
+            cur_cluster_name = res.cluster.name
+
+            res = cl_stub.GetClusters(info_pb2.GetClustersRequest(contract_id=contract_id, csp_id=csp_id))
+            print("Response: " + res.clusters)
+
+            cluster_list = res
+
+            # Iterate over cluster list except current cluster
+            for cluster in cluster_list
+              if cluster.id != {{input.parameters.cluster_id}}
+                res = app_stub.GetAppGroupByCluster(info_pb2.~~~
+
+
+
+            # Need to continue from here (old code) #
+            res = os.system(kubectl exec app_info_client "-command getAppGroupByCluster -params {clusterId: {{doc.id}} }")
+            app_group_list = res.split(',')
+
+            for app_group in app_group_list
+              app_group_doc = json.loads(app_group)
+              if app_group_doc.Type == LMA_TYPE
+                res = os.system(kubectl exec app_info_client "-command getApps -params {appGroupId: {{app_group_doc.id}}, Type: LMA_TYPE}")
+                 app_list = res.split(',')
+                 app = json.loads(app_list[0])
+                 endpoint = app.Endpoint
+                 # Add this cluster's endpoint to endpoint map
+                 endpointMap[cluster_doc.name] = endpoint
+
+              
+             # Update current endpoint to other cluster's site-yaml #
+             # Use separate function or handle it on next stage as below?
+             #
+             #
+             #
+
+
+
+  # Embed the 'updateMultipleEndpoints.py' code here
+  # Consider making this as separate workflow template for re-use? tricky..
+  - name: update all other endpoints to current cluster's site-yaml
+    inputs:
+      parameters:
+      - name: curClusterName
+      - name: endpointList
+    script:
+      image: python:alpine3.6
+      command: ["python"]
+      source: |
+        import argparse
+        import git
+        import ruamel.yaml
+        import os
+        import sys
+
+        print("Entering updateMultipleEndpoint script..")
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument('current_cluster', type=str,
+                    help="cluster name to which the endpoints are added")
+        parser.add_argument('endpoint_list', type=str,
+                    help="endpoint list to add")
+
+        args = parser.parse_args()
+        clusterName = args.current_cluster
+        endpointListStr = args.endpoint_list
+
+        repo = None
+        config = {}
+
+        sitePath = './decapod-site'
+        siteFileName = "{}/lma/site-values.yaml".format(clusterName)
+        siteFileNameFull = "{}/{}".format(sitePath, siteFileName)
+        # Tested with 'robertchoi80' repo
+        repoOrgName = ''
+
+        if not os.path.isdir(sitePath):
+            print("Cloning repository...")
+
+            repo = git.Repo.clone_from("https://github.com/{}/decapod-site".format(repoOrgName), 'decapod-site')
+            with repo.config_writer() as git_config:
+                git_config.set_value('user', 'email', 'tks-argo@tks.com')
+                git_config.set_value('user', 'name', 'TKS Argo')
+        else:
+            repo = git.Repo(sitePath)
+
+        with open(siteFileNameFull, 'r') as f:
+            config = ruamel.yaml.round_trip_load(f, preserve_quotes=True)
+
+        endpointList = endpointListStr.split()
+        print("endpointList: {}".format(endpointList))
+
+        appendCount = 0
+        charts = config["charts"]
+        thanosChart = [chart for chart in charts if chart['name'] == "thanos"][0]
+
+        for ep in endpointList:
+            if (ep in thanosChart['override']['querier.stores']):
+                print("The endpoint {} already exists.".format(ep))
+            else:
+                thanosChart['override']['querier.stores'].append(ep)
+                appendCount += 1
+
+        if appendCount == 0:
+            print("All endpoints already exists. Exiting script..")
+            sys.exit(0)
+
+        print("After insertion: {}".format(thanosChart))
+
+        with open(siteFileNameFull, 'w') as f:
+            ruamel.yaml.round_trip_dump(config, f)
+
+        diff = repo.git.diff(repo.head.commit.tree)
+        print(diff)
+
+        # Provide a list of the files to stage
+        repo.index.add([siteFileName])
+
+        # Provide a commit message
+        repo.index.commit("add previous thanos-sidecar endpoints to '{}' cluster".format(clusterName))
+        repo.remotes.origin.push()
+
+
+
+        # Another example: https://blog.naver.com/agapeuni/222281338248
