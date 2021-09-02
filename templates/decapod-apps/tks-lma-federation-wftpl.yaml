@@ -22,9 +22,9 @@ spec:
   templates:
   - name: deploy
     steps:
-    - - name: process
+    - - name: installApps
         template: createApps
-    - - name: postprocess
+    - - name: updateInfo
         template: updateToTksInfo
         arguments:
           # These params should be moved to global argument? #
@@ -37,6 +37,25 @@ spec:
             value: "abbead61-ff2a-4af4-8f41-d2c44c745de7"
           - name: thanos_sc_ep
             value: "thanos-sidecar.clusterX"
+    - - name: collectEndpoints
+        template: collectEndpoints
+        arguments:
+          # These params should be moved to global argument? #
+          parameters:
+          - name: tks_info_host
+            value: "127.0.0.1"
+          - name: cluster_id
+            value: "6abead61-ff2a-4af4-8f41-d2c44c745de7"
+          - name: app_group_id
+            value: "abbead61-ff2a-4af4-8f41-d2c44c745de7"
+          - name: cur_endpoint
+            value: "thanos-sidecar.clusterX"
+    - - name: updateSiteYaml?
+        template: updateSiteYaml
+        # add parameter here #
+        #
+        #
+        #
 
   - name: createApps
     dag:
@@ -127,12 +146,18 @@ spec:
               ]
         dependencies: [federation]
 
+  #########################################################
+  # Try to make this as separate workflow template so that
+  # this can be used for service-mesh, too
+  #########################################################
   - name: updateToTksInfo
     inputs:
       parameters:
       - name: tks_info_host
       - name: app_group_id
       - name: thanos_sc_ep
+      # add param 'app_group_type' here? (See above comment) #
+      #
     script:
       image: centos/python-38-centos7
       command: ["python"]
@@ -172,83 +197,105 @@ spec:
             res = app_stub.UpdateApp(info_pb2.UpdateAppRequest(app_group_id="{{inputs.parameters.app_group_id}}", app_type=common_pb2.PROMETHEUS, endpoint="{{inputs.parameters.thanos_sc_ep}}", metadata="{}"))
             print("Response code from UpdateApp: %d" % res.code)
 
-         ####################################
-         # Done refactoring until this line #
-         ####################################
 
-
-  - name: CollectEndpoints
+  - name: collectEndpoints
     inputs:
       parameters:
       - name: tks_info_host
-      - name: clusterid
-      - name: appgroupid
+      - name: cluster_id
+      - name: app_group_id
       - name: cur_endpoint
-    script:
-      image: python:alpine3.6
-      command: ["python"]
+      env:
+      - name: PYTHONPATH
+        value: "/opt/protobuf/:/opt/rh/rh-python38/root/lib/python3.8/site-packages/:/opt/app-root/lib/python3.8/site-packages/"
+      volumeMounts:
+      - name: tks-proto-vol
+        mountPath: "/opt/protobuf"
+        readOnly: true
       source: |
+        import subprocess
+        import sys
+
+        subprocess.check_call([sys.executable, "-m", "pip", "install",
+        "grpcio", "protobuf"])
+
+        import google.protobuf
         import grpc
         import info_pb2
         import info_pb2_grpc
+        import common_pb2
+        import common_pb2_grpc
 
         endpointMap = {}
 
-        ip = {{input.parameters.tks_info_host}}
+        ip = "{{inputs.parameters.tks_info_host}}"
         port = 9111 # if not specified
+        addr = "%s:%d" % (ip, port)
+        print("tks-info addr: %s" % addr)
 
-        # change to something equivalent in python
-        addr := fmt.Sprintf("%s:%d", *ip, *port)
- 
         with grpc.insecure_channel(addr) as channel:
             cl_stub = info_pb2_grpc.ClusterInfoServiceStub(channel)
             app_stub = info_pb2_grpc.AppInfoServiceStub(channel)
 
-            res = cl_stub.GetCluster(info_pb2.GetClusterRequest(cluster_id='{{input.parameters.cluster_id}}'))
+            res = cl_stub.GetCluster(info_pb2.GetClusterRequest(cluster_id="{{inputs.parameters.cluster_id}}"))
 
-            print("Response: " + res.cluster)
+            print("Response from GetCluster: ")
+            print(res.cluster)
             contract_id = res.cluster.contract_id
             csp_id = res.cluster.csp_id
             cur_cluster_name = res.cluster.name
 
             res = cl_stub.GetClusters(info_pb2.GetClustersRequest(contract_id=contract_id, csp_id=csp_id))
-            print("Response: " + res.clusters)
+            print("Response from GetClusters: ")
+            print(res.clusters)
 
-            cluster_list = res
+            cluster_list = res.clusters
 
             # Iterate over cluster list except current cluster
-            for cluster in cluster_list
-              if cluster.id != {{input.parameters.cluster_id}}
-                res = app_stub.GetAppGroupByCluster(info_pb2.~~~
+            for cluster in cluster_list:
+              if cluster.id != "{{inputs.parameters.cluster_id}}":
+                res = app_stub.GetAppGroupsByClusterID(common_pb2.IDRequest(id=cluster.id))
+                print("Response from GetAppGroupsByClusterID:")
+                print(res.app_groups)
 
+                for app_group in res.app_groups:
+                  if app_group.type == common_pb2.LMA:
+                    res = app_stub.GetApps(info_pb2.GetAppsRequest(app_group_id="{{inputs.parameters.app_group_id}}", type=common_pb2.PROMETHEUS))
 
+                    # This is based on the premise that there's only one prometheus per appGroup.
+                    endpoint = res.apps[0].endpoint
 
-            # Need to continue from here (old code) #
-            res = os.system(kubectl exec app_info_client "-command getAppGroupByCluster -params {clusterId: {{doc.id}} }")
-            app_group_list = res.split(',')
+                    # Add this cluster's endpoint to endpoint map
+                    endpointMap[cluster.name] = endpoint
 
-            for app_group in app_group_list
-              app_group_doc = json.loads(app_group)
-              if app_group_doc.Type == LMA_TYPE
-                res = os.system(kubectl exec app_info_client "-command getApps -params {appGroupId: {{app_group_doc.id}}, Type: LMA_TYPE}")
-                 app_list = res.split(',')
-                 app = json.loads(app_list[0])
-                 endpoint = app.Endpoint
-                 # Add this cluster's endpoint to endpoint map
-                 endpointMap[cluster_doc.name] = endpoint
-
-              
              # Update current endpoint to other cluster's site-yaml #
-             # Use separate function or handle it on next stage as below?
-             #
-             #
-             #
+             update_endpoint_to_site_yaml(cluster.name, cur_endpoint)
+
+        def update_endpoint_to_site_yaml(cluster_name, endpoint):
+            # -Need to check this throws error on error case
+            # -Should mount this script to this container before workflow run
+            # -Consider if this script is reusable for another task. Otherwise, just embedit here
+            output = subprocess.check_output("/opt/scripts/updateEndpoint.py", "--action", "add", "--cluster_name", cluster_name, "--endpoint", endpoint)
+            print(output)
+
+        ########################################
+        # Finished refactoring until this line #
+        ########################################
 
 
 
-  # Embed the 'updateMultipleEndpoints.py' code here
+
+
+
+
+
+
+
+
+
+  # Embed the 'updateMultipleEndpoints.py' code here?
   # Consider making this as separate workflow template for re-use? tricky..
-  - name: update all other endpoints to current cluster's site-yaml
+  - name: updateSiteYaml
     inputs:
       parameters:
       - name: curClusterName
