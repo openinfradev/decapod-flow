@@ -9,12 +9,22 @@ spec:
     parameters:
     - name: site_name
       value: "hanu-reference"
+    # This should be renamed to app_group_name
     - name: app_name
       value: "lma"
-    - name: label
-      value: "hanu-app1"
+    #- name: label
+    #  value: "hanu-app1"
     - name: repository_url
       value: "https://github.com/openinfradev/decapod-manifests"
+    ##########################
+    # For updateTksInfo task #
+    ##########################
+    - name: tks_info_host
+      value: "127.0.0.1"
+    - name: cluster_id
+      value: "abbead61-ff2a-4af4-8f41-d2c44c745de7"
+    - name: app_group_id
+      value: "abbead61-ff2a-4af4-8f41-d2c44c745de7"
   volumes:
   - name: tks-proto-vol
     configMap:
@@ -24,38 +34,77 @@ spec:
     steps:
     - - name: installApps
         template: createApps
-    - - name: updateInfo
-        template: updateToTksInfo
+
+      - name: updateTksInfo
+        templateRef:
+          name: update-tks-info
+          template: updateTksApp
+        arguments:
+          parameters:
+          # Can this be pre-determined? Or composed dynamically on deployment?
+          - name: endpoints
+            value: "{'PROMETHEUS': 'thanos-sidecar.cluster_id'}"
+          # Need to check default value works by commenting this out.
+          - name: app_group_status
+            value: "APP_GROUP_RUNNING"
+     
+      # LMA appGroup specific task #
+      - name: collectThanosScEndpoints
+        template: collectThanosScEndpoints
         arguments:
           # These params should be moved to global argument? #
           parameters:
           - name: tks_info_host
             value: "127.0.0.1"
           - name: cluster_id
-            value: "6abead61-ff2a-4af4-8f41-d2c44c745de7"
-          - name: appgroup_id
-            value: "abbead61-ff2a-4af4-8f41-d2c44c745de7"
-          - name: thanos_sc_ep
-            value: "thanos-sidecar.clusterX"
-    - - name: collectEndpoints
-        template: collectEndpoints
-        arguments:
-          # These params should be moved to global argument? #
-          parameters:
-          - name: tks_info_host
-            value: "127.0.0.1"
-          - name: cluster_id
-            value: "6abead61-ff2a-4af4-8f41-d2c44c745de7"
+            value: workflow.parameters.cluster_id
           - name: app_group_id
-            value: "abbead61-ff2a-4af4-8f41-d2c44c745de7"
+            value: workflow.parameters.app_group_id
+          # How can this be determined?
           - name: cur_endpoint
-            value: "thanos-sidecar.clusterX"
-    - - name: updateSiteYaml?
-        template: updateSiteYaml
-        # add parameter here #
-        #
-        #
-        #
+            value: "thanos-sidecar.cluster_id"
+         # How to pass these outputs? Using file in filesystem?
+         output:
+          - cluster_list
+          - inwards_endpoint_map
+          - outwards_endpoint_map
+
+      - name: updateDecapodManifestOutwards
+        templateRef:
+          name: update-decapod-manifest
+          template: updateManifest
+        arguments:
+          parameters:
+          - name: action
+            value: "insert"
+          - name: cluster_name
+            value: "{{item}}"
+          - name: app_group
+            value: "{{workflow.parameters.app_name}}"
+          - name: chart
+            value: "thanos"
+          - name: kv_map_str 
+            value: collectEndpoints.output.outwards_endpoint_map
+            ## {"querier.stores": "cur_endpoint"}
+        withParam: collectEndpoints.output.cluster_list
+
+      - name: updateDecapodManifestInwards
+        templateRef:
+          name: update-decapod-manifest
+          template: updateManifest
+        arguments:
+          parameters:
+          - name: action
+            value: "insert"
+          - name: cluster_name
+            value: "{{currentCLUSTER}}"
+          - name: app_group
+            value: "{{workflow.parameters.app_name}}"
+          - name: chart
+            value: "thanos"
+          - name: kv_map_str
+            value: collectEndpoints.output.inwards_endpoint_map
+            ## {"querier.stores": ['endpointA', 'endpointB']}
 
   - name: createApps
     dag:
@@ -146,59 +195,8 @@ spec:
               ]
         dependencies: [federation]
 
-  #########################################################
-  # Try to make this as separate workflow template so that
-  # this can be used for service-mesh, too
-  #########################################################
-  - name: updateToTksInfo
-    inputs:
-      parameters:
-      - name: tks_info_host
-      - name: app_group_id
-      - name: thanos_sc_ep
-      # add param 'app_group_type' here? (See above comment) #
-      #
-    script:
-      image: centos/python-38-centos7
-      command: ["python"]
-      env:
-      - name: PYTHONPATH
-        value: "/opt/protobuf/:/opt/rh/rh-python38/root/lib/python3.8/site-packages/:/opt/app-root/lib/python3.8/site-packages/"
-      volumeMounts:
-      - name: tks-proto-vol
-        mountPath: "/opt/protobuf"
-        readOnly: true
-      source: |
-        import subprocess
-        import sys
 
-        subprocess.check_call([sys.executable, "-m", "pip", "install",
-        "grpcio", "protobuf"])
-
-        import google.protobuf
-        import grpc
-        import info_pb2
-        import info_pb2_grpc
-        import common_pb2
-        import common_pb2_grpc
-
-        ip = "{{inputs.parameters.tks_info_host}}"
-        port = 9111 # if not specified
-        addr = "%s:%d" % (ip, port)
-        print("tks-info addr: %s" % addr)
-
-        with grpc.insecure_channel(addr) as channel:
-            cl_stub = info_pb2_grpc.ClusterInfoServiceStub(channel)
-            app_stub = info_pb2_grpc.AppInfoServiceStub(channel)
-
-            res = app_stub.UpdateAppGroupStatus(info_pb2.UpdateAppGroupStatusRequest(app_group_id="{{inputs.parameters.app_group_id}}", status=common_pb2.APP_GROUP_RUNNING))
-            print("Response code from UpdateAppGroupStaus: %d" % res.code)
-
-            res = app_stub.UpdateApp(info_pb2.UpdateAppRequest(app_group_id="{{inputs.parameters.app_group_id}}", app_type=common_pb2.PROMETHEUS, endpoint="{{inputs.parameters.thanos_sc_ep}}", metadata="{}"))
-            print("Response code from UpdateApp: %d" % res.code)
-
-
-  - name: collectEndpoints
+  - name: collectThanosScEndpoints
     inputs:
       parameters:
       - name: tks_info_host
@@ -226,7 +224,10 @@ spec:
         import common_pb2
         import common_pb2_grpc
 
-        endpointMap = {}
+        output_cluster_list = []
+        inwards_endpoint_list = []
+        inwards_endpoint_map = {}
+        outwards_endpoint_map = {}
 
         ip = "{{inputs.parameters.tks_info_host}}"
         port = 9111 # if not specified
@@ -249,134 +250,26 @@ spec:
             print("Response from GetClusters: ")
             print(res.clusters)
 
-            cluster_list = res.clusters
+            # Iterate over cluster list except current cluster #
+            for cluster in res.clusters:
+                if cluster.id != "{{inputs.parameters.cluster_id}}":
+                  output_cluster_list.append(cluster.id or cluster.name)
+                  res = app_stub.GetAppGroupsByClusterID(common_pb2.IDRequest(id=cluster.id))
+                  print("Response from GetAppGroupsByClusterID:")
+                  print(res.app_groups)
 
-            # Iterate over cluster list except current cluster
-            for cluster in cluster_list:
-              if cluster.id != "{{inputs.parameters.cluster_id}}":
-                res = app_stub.GetAppGroupsByClusterID(common_pb2.IDRequest(id=cluster.id))
-                print("Response from GetAppGroupsByClusterID:")
-                print(res.app_groups)
+                  for app_group in res.app_groups:
+                    if app_group.type == common_pb2.LMA:
+                      res = app_stub.GetApps(info_pb2.GetAppsRequest(app_group_id="{{inputs.parameters.app_group_id}}", type=common_pb2.PROMETHEUS))
 
-                for app_group in res.app_groups:
-                  if app_group.type == common_pb2.LMA:
-                    res = app_stub.GetApps(info_pb2.GetAppsRequest(app_group_id="{{inputs.parameters.app_group_id}}", type=common_pb2.PROMETHEUS))
+                      # This is based on the premise that there's only one prometheus per appGroup.
+                      endpoint = res.apps[0].endpoint
 
-                    # This is based on the premise that there's only one prometheus per appGroup.
-                    endpoint = res.apps[0].endpoint
+                      # Add this cluster's endpoint to endpoint map
+                      inwards_endpoint_list.append(endpoint)
 
-                    # Add this cluster's endpoint to endpoint map
-                    endpointMap[cluster.name] = endpoint
+        # Update current endpoint to other cluster's site-yaml #
+        outwards_endpoint_map['querier.stores'] = cur_endpoint 
 
-             # Update current endpoint to other cluster's site-yaml #
-             update_endpoint_to_site_yaml(cluster.name, cur_endpoint)
-
-        def update_endpoint_to_site_yaml(cluster_name, endpoint):
-            # -Need to check this throws error on error case
-            # -Should mount this script to this container before workflow run
-            # -Consider if this script is reusable for another task. Otherwise, just embedit here
-            output = subprocess.check_output("/opt/scripts/updateEndpoint.py", "--action", "add", "--cluster_name", cluster_name, "--endpoint", endpoint)
-            print(output)
-
-        ########################################
-        # Finished refactoring until this line #
-        ########################################
-
-
-
-
-
-
-
-
-
-
-
-
-  # Embed the 'updateMultipleEndpoints.py' code here?
-  # Consider making this as separate workflow template for re-use? tricky..
-  - name: updateSiteYaml
-    inputs:
-      parameters:
-      - name: curClusterName
-      - name: endpointList
-    script:
-      image: python:alpine3.6
-      command: ["python"]
-      source: |
-        import argparse
-        import git
-        import ruamel.yaml
-        import os
-        import sys
-
-        print("Entering updateMultipleEndpoint script..")
-
-        parser = argparse.ArgumentParser()
-        parser.add_argument('current_cluster', type=str,
-                    help="cluster name to which the endpoints are added")
-        parser.add_argument('endpoint_list', type=str,
-                    help="endpoint list to add")
-
-        args = parser.parse_args()
-        clusterName = args.current_cluster
-        endpointListStr = args.endpoint_list
-
-        repo = None
-        config = {}
-
-        sitePath = './decapod-site'
-        siteFileName = "{}/lma/site-values.yaml".format(clusterName)
-        siteFileNameFull = "{}/{}".format(sitePath, siteFileName)
-        # Tested with 'robertchoi80' repo
-        repoOrgName = ''
-
-        if not os.path.isdir(sitePath):
-            print("Cloning repository...")
-
-            repo = git.Repo.clone_from("https://github.com/{}/decapod-site".format(repoOrgName), 'decapod-site')
-            with repo.config_writer() as git_config:
-                git_config.set_value('user', 'email', 'tks-argo@tks.com')
-                git_config.set_value('user', 'name', 'TKS Argo')
-        else:
-            repo = git.Repo(sitePath)
-
-        with open(siteFileNameFull, 'r') as f:
-            config = ruamel.yaml.round_trip_load(f, preserve_quotes=True)
-
-        endpointList = endpointListStr.split()
-        print("endpointList: {}".format(endpointList))
-
-        appendCount = 0
-        charts = config["charts"]
-        thanosChart = [chart for chart in charts if chart['name'] == "thanos"][0]
-
-        for ep in endpointList:
-            if (ep in thanosChart['override']['querier.stores']):
-                print("The endpoint {} already exists.".format(ep))
-            else:
-                thanosChart['override']['querier.stores'].append(ep)
-                appendCount += 1
-
-        if appendCount == 0:
-            print("All endpoints already exists. Exiting script..")
-            sys.exit(0)
-
-        print("After insertion: {}".format(thanosChart))
-
-        with open(siteFileNameFull, 'w') as f:
-            ruamel.yaml.round_trip_dump(config, f)
-
-        diff = repo.git.diff(repo.head.commit.tree)
-        print(diff)
-
-        # Provide a list of the files to stage
-        repo.index.add([siteFileName])
-
-        # Provide a commit message
-        repo.index.commit("add previous thanos-sidecar endpoints to '{}' cluster".format(clusterName))
-        repo.remotes.origin.push()
-
-
-
-        # Another example: https://blog.naver.com/agapeuni/222281338248
+        # Compose profer format to be used as input on next step 
+        inwards_endpoint_map['querier.stores'] = inwards_endpoint_list
