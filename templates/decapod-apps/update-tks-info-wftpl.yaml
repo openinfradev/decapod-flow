@@ -21,7 +21,7 @@ spec:
       parameters:
       - name: endpoints # Dict type
       - name: app_group_status
-        value: "APP_GROUP_RUNNING"
+        value: APP_GROUP_RUNNING
     script:
       image: centos/python-38-centos7
       command: ["python"]
@@ -54,10 +54,10 @@ spec:
         with grpc.insecure_channel(addr) as channel:
             app_stub = info_pb2_grpc.AppInfoServiceStub(channel)
 
-            res = app_stub.UpdateAppGroupStatus(info_pb2.UpdateAppGroupStatusRequest(app_group_id="{{workflow.parameters.app_group_id}}", status=common_pb2."{{workflow.parameters.app_group_status}}"))
+            res = app_stub.UpdateAppGroupStatus(info_pb2.UpdateAppGroupStatusRequest(app_group_id="{{workflow.parameters.app_group_id}}", status=common_pb2.{{inputs.parameters.app_group_status}}))
             print("Response code from UpdateAppGroupStaus: %d" % res.code)
 
-            # Can app_type be passed like this?
-            for app_type, ep in {{inputs.parameters.endpoints}}:
-              res = app_stub.UpdateApp(info_pb2.UpdateAppRequest(app_group_id="{{workflow.parameters.app_group_id}}", app_type="common_pb2."+app_type, endpoint=ep, metadata="{}"))
+            # TODO: how to dynamically construct app_type param as enum format here?
+            for app_type_, ep in {{inputs.parameters.endpoints}}:
+              res = app_stub.UpdateApp(info_pb2.UpdateAppRequest(app_group_id="{{workflow.parameters.app_group_id}}", app_type=common_pb2.{{app_type_}}, endpoint=ep, metadata="{}"))
               print("Response code from UpdateApp: %d" % res.code)

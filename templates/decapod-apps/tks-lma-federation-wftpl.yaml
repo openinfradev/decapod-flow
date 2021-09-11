@@ -12,8 +12,6 @@ spec:
     # This should be renamed to app_group_name
     - name: app_name
       value: "lma"
-    #- name: label
-    #  value: "hanu-app1"
     - name: repository_url
       value: "https://github.com/openinfradev/decapod-manifests"
     ##########################
@@ -35,7 +33,7 @@ spec:
     - - name: installApps
         template: createApps
 
-      - name: updateTksInfo
+    - - name: updateTksInfo
         templateRef:
           name: update-tks-info
           template: updateTksApp
@@ -43,33 +41,27 @@ spec:
           parameters:
           # Can this be pre-determined? Or composed dynamically on deployment?
           - name: endpoints
-            value: "{'PROMETHEUS': 'thanos-sidecar.cluster_id'}"
-          # Need to check default value works by commenting this out.
+            value: "{'PROMETHEUS': 'thanos-sidecar.cluster_xy'}"
           - name: app_group_status
             value: "APP_GROUP_RUNNING"
      
       # LMA appGroup specific task #
-      - name: collectThanosScEndpoints
+    - - name: collectThanosScEndpoints
         template: collectThanosScEndpoints
         arguments:
           # These params should be moved to global argument? #
           parameters:
           - name: tks_info_host
-            value: "127.0.0.1"
+            value:  "{{ workflow.parameters.tks_info_host }}"
           - name: cluster_id
-            value: workflow.parameters.cluster_id
+            value: "{{ workflow.parameters.cluster_id }}"
           - name: app_group_id
-            value: workflow.parameters.app_group_id
+            value: "{{ workflow.parameters.app_group_id }}"
           # How can this be determined?
           - name: cur_endpoint
-            value: "thanos-sidecar.cluster_id"
-         # How to pass these outputs? Using file in filesystem?
-         output:
-          - cluster_list
-          - inwards_endpoint_map
-          - outwards_endpoint_map
+            value: "thanos-sidecar.cluster_xy"
 
-      - name: updateDecapodManifestOutwards
+    - - name: updateDecapodManifestOutwards
         templateRef:
           name: update-decapod-manifest
           template: updateManifest
@@ -78,17 +70,17 @@ spec:
           - name: action
             value: "insert"
           - name: cluster_name
-            value: "{{item}}"
+            value: "{{item.name}}"
           - name: app_group
             value: "{{workflow.parameters.app_name}}"
           - name: chart
             value: "thanos"
           - name: kv_map_str 
-            value: collectEndpoints.output.outwards_endpoint_map
-            ## {"querier.stores": "cur_endpoint"}
-        withParam: collectEndpoints.output.cluster_list
+            value: "{{steps.collectThanosScEndpoints.outputs.parameters.outwards_endpoint_map}}"
+            ## {"querier.stores": "CURRENT_ENDPOINT"}
+        withParam: "{{steps.collectThanosScEndpoints.outputs.parameters.cluster_list}}"
 
-      - name: updateDecapodManifestInwards
+    - - name: updateDecapodManifestInwards
         templateRef:
           name: update-decapod-manifest
           template: updateManifest
@@ -96,14 +88,15 @@ spec:
           parameters:
           - name: action
             value: "insert"
+          # TODO: modify this to reflect actual cluster name for all cases
           - name: cluster_name
-            value: "{{currentCLUSTER}}"
+            value: "{{workflow.parameters.cluster_id}}"
           - name: app_group
             value: "{{workflow.parameters.app_name}}"
           - name: chart
             value: "thanos"
           - name: kv_map_str
-            value: collectEndpoints.output.inwards_endpoint_map
+            value: "{{steps.collectThanosScEndpoints.outputs.parameters.inwards_endpoint_map}}"
             ## {"querier.stores": ['endpointA', 'endpointB']}
 
   - name: createApps
@@ -203,6 +196,25 @@ spec:
       - name: cluster_id
       - name: app_group_id
       - name: cur_endpoint
+    outputs:
+      parameters:
+      - name: cluster_list
+        valueFrom:
+          path: /mnt/out/cluster_list.txt
+      - name: inwards_endpoint_map
+        valueFrom:
+          path: /mnt/out/inwards_endpoint.txt
+      - name: outwards_endpoint_map
+        valueFrom:
+          path: /mnt/out/outwards_endpoint.txt
+    volumes:
+    - name: out
+      emptyDir: {}
+    script: 
+      name: 'collect'
+      image: centos/python-38-centos7
+      command:
+      - python
       env:
       - name: PYTHONPATH
         value: "/opt/protobuf/:/opt/rh/rh-python38/root/lib/python3.8/site-packages/:/opt/app-root/lib/python3.8/site-packages/"
@@ -210,10 +222,13 @@ spec:
       - name: tks-proto-vol
         mountPath: "/opt/protobuf"
         readOnly: true
+      - name: out
+        mountPath: /mnt/out
       source: |
         import subprocess
         import sys
 
+        # TODO: bake custom image that includes these packages
         subprocess.check_call([sys.executable, "-m", "pip", "install",
         "grpcio", "protobuf"])
 
@@ -223,14 +238,17 @@ spec:
         import info_pb2_grpc
         import common_pb2
         import common_pb2_grpc
+        import json
 
         output_cluster_list = []
+        temp_map = {}
         inwards_endpoint_list = []
         inwards_endpoint_map = {}
         outwards_endpoint_map = {}
 
         ip = "{{inputs.parameters.tks_info_host}}"
-        port = 9111 # if not specified
+        # TODO: Make port workflow param?
+        port = 9111
         addr = "%s:%d" % (ip, port)
         print("tks-info addr: %s" % addr)
 
@@ -244,6 +262,7 @@ spec:
             print(res.cluster)
             contract_id = res.cluster.contract_id
             csp_id = res.cluster.csp_id
+            # TODO: export this as step output to use it on next step
             cur_cluster_name = res.cluster.name
 
             res = cl_stub.GetClusters(info_pb2.GetClustersRequest(contract_id=contract_id, csp_id=csp_id))
@@ -253,7 +272,10 @@ spec:
             # Iterate over cluster list except current cluster #
             for cluster in res.clusters:
                 if cluster.id != "{{inputs.parameters.cluster_id}}":
-                  output_cluster_list.append(cluster.id or cluster.name)
+                  temp_map["name"] = cluster.name
+                  str_json = json.dumps(temp_map)
+                  output_cluster_list.append(str_json)
+
                   res = app_stub.GetAppGroupsByClusterID(common_pb2.IDRequest(id=cluster.id))
                   print("Response from GetAppGroupsByClusterID:")
                   print(res.app_groups)
@@ -269,7 +291,30 @@ spec:
                       inwards_endpoint_list.append(endpoint)
 
         # Update current endpoint to other cluster's site-yaml #
-        outwards_endpoint_map['querier.stores'] = cur_endpoint 
+        outwards_endpoint_map['querier.stores'] = "{{inputs.parameters.cur_endpoint}}"
 
         # Compose profer format to be used as input on next step 
         inwards_endpoint_map['querier.stores'] = inwards_endpoint_list
+
+        ###########################
+        # Construct output params #
+        ###########################
+        len_list = len(output_cluster_list)
+
+        with open("/mnt/out/cluster_list.txt", "w") as f:
+          f.write('[')
+
+          for idx, item in enumerate(output_cluster_list, start=1):
+            print("item {}: {}".format(idx, item))
+            f.write(item.strip("'"))
+            if idx < len_list:
+              f.write(',')
+          f.write(']')
+
+        with open("/mnt/out/inwards_endpoint.txt", "w") as f:
+          str_inwards_endpoint = repr(inwards_endpoint_map)
+          f.write(str_inwards_endpoint)
+
+        with open("/mnt/out/outwards_endpoint.txt", "w") as f:
+          str_outwards_endpoint = repr(outwards_endpoint_map)
+          f.write(str_outwards_endpoint)
