@@ -6,6 +6,9 @@ metadata:
 spec:
   templates:
   - name: updateManifest
+    synchronization:
+      mutex:
+        name: default
     inputs:
       parameters:
       - name: action
@@ -22,15 +25,11 @@ spec:
       - name: kv_map_str
         value: ""
     script:
-      image: centos/python-38-centos7
+      image: sktdev/python-centos-wf-worker:v1.0
       command: ["python"]
       env:
       source: |
-        import subprocess
         import sys
-        # TODO: bake custom image that includes these packages
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "GitPython", "ruamel.yaml"])
-
         import argparse
         import git
         import ruamel.yaml
@@ -62,6 +61,8 @@ spec:
                 git_config.set_value('user', 'email', 'tks-argo@tks.com')
                 git_config.set_value('user', 'name', 'TKS Argo')
         else:
+            print("The repo already exists. Pulling latest updates..")
+
             repo = git.Repo(sitePath)
             repo.remotes.origin.pull()
 
