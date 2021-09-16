@@ -10,7 +10,7 @@ spec:
       value: "hanu-deploy-apps"
     - name: app_name
       value: "lma"
-    - name: repository_url
+    - name: manifest_repo_url
       value: "https://github.com/openinfradev/decapod-manifests"
     - name: revision
       value: "main"
@@ -56,7 +56,7 @@ spec:
         - name: NAMESPACE
           value: "{{inputs.parameters.namespace}}"
         - name: REPO
-          value: "{{workflow.parameters.repository_url}}"
+          value: "{{workflow.parameters.manifest_repo_url}}"
         - name: REVISION
           value: "{{workflow.parameters.revision}}"
 

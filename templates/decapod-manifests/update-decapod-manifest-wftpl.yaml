@@ -56,7 +56,7 @@ spec:
         if not os.path.isdir(sitePath):
             print("Cloning repository...")
 
-            repo = git.Repo.clone_from('https://github.com/robertchoi80/decapod-site', 'decapod-site')
+            repo = git.Repo.clone_from("{{workflow.parameters.site_repo_url}}", 'decapod-site')
             with repo.config_writer() as git_config:
                 git_config.set_value('user', 'email', 'tks-argo@tks.com')
                 git_config.set_value('user', 'name', 'TKS Argo')

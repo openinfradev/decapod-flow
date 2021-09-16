@@ -11,7 +11,9 @@ spec:
       value: "hanu-reference"
     - name: app_name
       value: "lma"
-    - name: repository_url
+    - name: site_repo_url
+      value: "https://github.com/openinfradev/decapod-site"
+    - name: manifest_repo_url
       value: "https://github.com/openinfradev/decapod-manifests"
     - name: revision
       value: main

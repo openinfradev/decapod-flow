@@ -11,7 +11,7 @@ spec:
         value: hanu-reference
       - name: app_name
         value: service-mesh
-      - name: repository_url
+      - name: manifest_repo_url
         value: 'https://github.com/openinfradev/decapod-manifests'
       - name: revision
         value: main
