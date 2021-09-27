@@ -4,7 +4,7 @@ metadata:
   name: lma-federation
   namespace: argo
 spec:
-  entrypoint: deploy
+  entrypoint: prepare
   arguments:
     parameters:
     - name: site_name
@@ -18,6 +18,37 @@ spec:
     - name: revision
       value: main
   templates:
+  - name: prepare
+    inputs: {}
+    outputs: {}
+    metadata: {}
+    steps:
+      - - name: configuration
+          template: configuration
+          arguments: {}
+      - - name: deploy
+          template: deploy
+          arguments: {}
+  - name: configuration
+    inputs: {}
+    outputs: {}
+    metadata: {}
+    container:
+      name: config
+      image: 'k8s.gcr.io/hyperkube:v1.18.8'
+      command:
+        - /bin/bash
+        - '-c'
+        - |
+          kubectl get ns lma
+          if [[ $? != 0 ]]; then
+            kubectl create ns lma
+            kubectl label ns lma name=lma
+            kubectl label ns lma taco-tls=enabled
+          fi
+      resources: {}
+      imagePullPolicy: IfNotPresent
+    activeDeadlineSeconds: 120
   - name: deploy
     dag:
       tasks:
