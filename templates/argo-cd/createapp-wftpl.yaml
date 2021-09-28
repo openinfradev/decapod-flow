@@ -33,13 +33,14 @@ spec:
         ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
         --password $ARGO_PASSWORD
 
-        export ARGOCD_APP_NAME=$(echo "${SITE_NAME:0:8}")-$PATH
+        ARGOCD_APP_NAME=${SITE_NAME:0:8}-$PATH
+        ARGOCD_APP_LABEL=${SITE_NAME:0:8}-$APP_NAME
 
         # check if app already exists.
         ./argocd app get $ARGOCD_APP_NAME
         if [[ $? -ne 0 ]]; then
           # create new application if not exists.
-          ./argocd app create $ARGOCD_APP_NAME --repo $REPO --revision $REVISION --path $SITE_NAME/$APP_NAME/$PATH --dest-namespace $NAMESPACE --dest-name $SITE_NAME --project $APP_NAME --label app=$ARGOCD_APP_NAME --directory-recurse
+          ./argocd app create $ARGOCD_APP_NAME --repo $REPO --revision $REVISION --path $SITE_NAME/$APP_NAME/$PATH --dest-namespace $NAMESPACE --dest-name $SITE_NAME --project $APP_NAME --label app=$ARGOCD_APP_LABEL --directory-recurse
         fi
 
         ./argocd app set $ARGOCD_APP_NAME --sync-policy automated --auto-prune
