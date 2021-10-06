@@ -1,3 +1,4 @@
+## Example workflow that calls delete-project template ##
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
@@ -9,10 +10,12 @@ spec:
     parameters:
     - name: project
       value: "lma"
+    - name: filter
+      value: ""
   templates:
   - name: process
     steps:
-    - - name: remove
+    - - name: removeLMA
         templateRef:
           name: delete-project
           template: DeleteProject
@@ -20,3 +23,5 @@ spec:
           parameters: 
           - name: project
             value: "{{ workflow.parameters.project }}"
+          - name: filter
+            value: "{{ workflow.parameters.filter }}"

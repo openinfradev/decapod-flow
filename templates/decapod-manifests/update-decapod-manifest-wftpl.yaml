@@ -96,6 +96,7 @@ spec:
                   chartFound['override'][k].append(v)
                   numChanged += 1
             commit_msg = "insert items for {} chart in '{}' cluster".format(chartName, clusterName)
+        # DeleteItemFromList
         elif action == 'delete':
             for k,v in kvMap.items():
               if (v in chartFound['override'][k]):

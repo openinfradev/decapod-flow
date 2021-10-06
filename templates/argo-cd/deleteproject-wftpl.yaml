@@ -4,15 +4,12 @@ metadata:
   name: delete-project
   namespace: argo
 spec:
-  arguments:
-    parameters:
-    - name: project
-      value: "lma"
   templates:
   - name: DeleteProject
     inputs:
       parameters:
       - name: project
+      - name: filter
     activeDeadlineSeconds: 900
     container:
       name: 'deleteProject'
@@ -29,8 +26,7 @@ spec:
         # check if project already exists.
         ./argocd proj get $PROJECT
         if [[ $? -eq 0 ]]; then
-          ./argocd app list --project $PROJECT --output name | xargs argocd delete --cascade -y
-          ./argocd proj delete $PROJECT
+          ./argocd app list -l $FILTER --output name | xargs argocd delete --cascade -y
         else
           echo "No such project: $PROJECT"
           exit 1
@@ -40,4 +36,6 @@ spec:
             name: "decapod-argocd-config"
       env:
         - name: PROJECT
-          value: "{{workflow.parameters.project}}"
+          value: "{{inputs.parameters.project}}"
+        - name: FILTER
+          value: "{{inputs.parameters.filter}}"
