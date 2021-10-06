@@ -24,7 +24,7 @@ spec:
             template: delete-argocd-app
             arguments:
               parameters:
-                - name: app_name
+                - name: app_group
                   value: service-mesh
         - - name: delete-finalizer-app
             template: delete-finalizer-app
@@ -141,7 +141,7 @@ spec:
     - name: delete-argocd-app
       inputs:
         parameters:
-          - name: app_name
+          - name: app_group
       container:
         name: delete-argocd-app
         image: 'docker.io/sktdev/argocd:latest'
@@ -165,7 +165,7 @@ spec:
               name: decapod-argocd-config
         env:
         - name: APP_NAME
-          value: "{{inputs.parameters.app_name}}"
+          value: "{{inputs.parameters.app_group}}"
       activeDeadlineSeconds: 900
       retryStrategy:
         limit: 2

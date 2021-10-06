@@ -9,7 +9,7 @@ spec:
     parameters:
       - name: site_name
         value: hanu-reference
-      - name: app_name
+      - name: app_group
         value: service-mesh
       - name: manifest_repo_url
         value: 'https://github.com/openinfradev/decapod-manifests'
