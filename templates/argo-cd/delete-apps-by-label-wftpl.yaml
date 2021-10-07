@@ -23,10 +23,12 @@ spec:
         --password $ARGO_PASSWORD
 
         app_list=$(./argocd app list -l $FILTER --output name)
-        if [[ $? -eq 0 ]]; then
-          echo "$app_list" | xargs argocd delete --cascade -y
+        if [[ $? -eq 0 && -n $app_list ]]; then
+          echo "Deleting apps: $app_list"
+          echo "$app_list" | xargs ./argocd app delete --cascade -y
+          echo "App deletion command's been finished!"
         else
-          echo "No such label: $FILTER"
+          echo "No such label: $FILTER. Exiting.."
           exit 1
         fi
       envFrom:
