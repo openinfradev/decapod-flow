@@ -1,18 +1,17 @@
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
-  name: delete-project
+  name: delete-apps
   namespace: argo
 spec:
   templates:
-  - name: DeleteProject
+  - name: DeleteAppsByLabel
     inputs:
       parameters:
-      - name: project
       - name: filter
     activeDeadlineSeconds: 900
     container:
-      name: 'deleteProject'
+      name: 'delete-apps'
       image: docker.io/sktdev/argocd:latest
       imagePullPolicy: IfNotPresent
       command:
@@ -23,19 +22,16 @@ spec:
         ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
         --password $ARGO_PASSWORD
 
-        # check if project already exists.
-        ./argocd proj get $PROJECT
+        app_list=$(./argocd app list -l $FILTER --output name)
         if [[ $? -eq 0 ]]; then
-          ./argocd app list -l $FILTER --output name | xargs argocd delete --cascade -y
+          echo "$app_list" | xargs argocd delete --cascade -y
         else
-          echo "No such project: $PROJECT"
+          echo "No such label: $FILTER"
           exit 1
         fi
       envFrom:
         - secretRef:
             name: "decapod-argocd-config"
       env:
-        - name: PROJECT
-          value: "{{inputs.parameters.project}}"
         - name: FILTER
           value: "{{inputs.parameters.filter}}"
