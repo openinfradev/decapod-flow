@@ -1,0 +1,27 @@
+## Example workflow that calls delete-project template ##
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: remove-lma-federation
+  namespace: argo
+spec:
+  entrypoint: process
+  arguments:
+    parameters:
+    - name: project
+      value: "lma"
+    - name: filter
+      value: ""
+  templates:
+  - name: process
+    steps:
+    - - name: removeLMA
+        templateRef:
+          name: delete-project
+          template: DeleteProject
+        arguments:
+          parameters: 
+          - name: project
+            value: "{{ workflow.parameters.project }}"
+          - name: filter
+            value: "{{ workflow.parameters.filter }}"
