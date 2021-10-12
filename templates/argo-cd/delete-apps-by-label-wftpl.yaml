@@ -22,13 +22,53 @@ spec:
         ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
         --password $ARGO_PASSWORD
 
+        # Pre-check: validate if the label is correct
         app_list=$(./argocd app list -l $FILTER --output name)
         if [[ $? -eq 0 && -n $app_list ]]; then
-          echo "Deleting apps: $app_list"
-          echo "$app_list" | xargs ./argocd app delete --cascade -y
-          echo "App deletion command's been finished!"
+          echo "Found apps with label '$FILTER'.. Start deleting apps.."
         else
           echo "No such label: $FILTER. Exiting.."
+          exit 1
+        fi
+
+        deleted=False
+
+        # Delete normal apps including CRs
+        app_list=$(./argocd app list -l $FILTER --output name | grep -v operator)
+        if [[ $? -eq 0 && -n $app_list ]]; then
+          echo "[1st phase] Deleting apps: $app_list"
+          echo "$app_list" | xargs ./argocd app delete --cascade -y
+
+          until [ $(./argocd app list -l $FILTER --output name | grep -v operator | wc -l) == 0 ]
+          do
+            echo "Waiting 20 secs for apps to be deleted.."
+          done 
+
+          echo "[1st phase] App deletion have been finished!"
+          deleted=True
+        else
+          echo "No apps found except operators. Skipping 1st phase.."
+        fi
+
+        # Delete operators
+        app_list=$(./argocd app list -l $FILTER --output name)
+        if [[ $? -eq 0 && -n $app_list ]]; then
+          echo "[2nd phase] Deleting operators: $app_list"
+          echo "$app_list" | xargs ./argocd app delete --cascade -y
+
+          until [ $(./argocd app list -l $FILTER --output name | wc -l) == 0 ]
+          do
+            echo "Waiting 20 secs for apps to be deleted.."
+          done 
+
+          echo "[2nd phase] App deletion have been finished!"
+          deleted=True
+        else
+          echo "No operators found. Skipping 2nd phase.."
+        fi
+
+        if [ $deleted != True ] ; then
+          echo "No apps have been deleted at all. Something wrong.."
           exit 1
         fi
       envFrom:
