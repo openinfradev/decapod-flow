@@ -11,6 +11,8 @@ spec:
         name: default
     inputs:
       parameters:
+      - name: site_repo_url
+        value: ""
       - name: action
         value: "update"
       - name: cluster_name
@@ -56,7 +58,7 @@ spec:
         if not os.path.isdir(sitePath):
             print("Cloning repository...")
 
-            repo = git.Repo.clone_from("{{workflow.parameters.site_repo_url}}", 'decapod-site')
+            repo = git.Repo.clone_from("{{inputs.parameters.site_repo_url}}", 'decapod-site')
             with repo.config_writer() as git_config:
                 git_config.set_value('user', 'email', 'tks-argo@tks.com')
                 git_config.set_value('user', 'name', 'TKS Argo')
