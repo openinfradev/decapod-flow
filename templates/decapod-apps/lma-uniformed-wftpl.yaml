@@ -9,8 +9,6 @@ spec:
     parameters:
     - name: site_name
       value: "hanu-reference"
-    - name: app_group
-      value: "lma"
     - name: site_repo_url
       value: "https://github.com/openinfradev/decapod-site"
     - name: manifest_repo_url
@@ -61,9 +59,9 @@ spec:
           - name: list
             value: |
               [
-                { "path": "prometheus-operator", "namespace": "lma" },
-                { "path": "eck-operator", "namespace": "elastic-system" },
-                { "path": "fluentbit-operator", "namespace": "lma" }
+                { "app_group": "lma", "path": "prometheus-operator", "namespace": "lma",  },
+                { "app_group": "lma", "path": "eck-operator", "namespace": "elastic-system" },
+                { "app_group": "lma", "path": "fluentbit-operator", "namespace": "lma" }
               ]
         dependencies: []
       - name: logging
@@ -75,9 +73,9 @@ spec:
           - name: list
             value: |
               [
-                { "path": "eck-resource", "namespace": "lma" },
-                { "path": "fluentbit", "namespace": "lma" },
-                { "path": "kubernetes-event-exporter", "namespace": "lma" }
+                { "app_group": "lma", "path": "eck-resource", "namespace": "lma" },
+                { "app_group": "lma", "path": "fluentbit", "namespace": "lma" },
+                { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma" }
               ]
         dependencies: [operator]
       - name: prepare-lma
@@ -89,8 +87,8 @@ spec:
           - name: list
             value: |
               [
-                { "path": "thanos-config", "namespace": "lma" },
-                { "path": "prepare-etcd-secret", "namespace": "lma" }
+                { "app_group": "lma", "path": "thanos-config", "namespace": "lma" },
+                { "app_group": "lma", "path": "prepare-etcd-secret", "namespace": "lma" }
               ]
         dependencies: [operator]
 
@@ -103,13 +101,13 @@ spec:
           - name: list
             value: |
               [
-                { "path": "prometheus", "namespace": "lma" },
-                { "path": "kube-state-metrics", "namespace": "lma" },
-                { "path": "prometheus-process-exporter", "namespace": "lma" },
-                { "path": "prometheus-pushgateway", "namespace": "lma" },
-                { "path": "prometheus-node-exporter", "namespace": "lma" },
-                { "path": "prometheus-adapter", "namespace": "lma" },
-                { "path": "addons", "namespace": "lma" }
+                { "app_group": "lma", "path": "prometheus", "namespace": "lma" },
+                { "app_group": "lma", "path": "kube-state-metrics", "namespace": "lma" },
+                { "app_group": "lma", "path": "prometheus-process-exporter", "namespace": "lma" },
+                { "app_group": "lma", "path": "prometheus-pushgateway", "namespace": "lma" },
+                { "app_group": "lma", "path": "prometheus-node-exporter", "namespace": "lma" },
+                { "app_group": "lma", "path": "prometheus-adapter", "namespace": "lma" },
+                { "app_group": "lma", "path": "addons", "namespace": "lma" }
               ]
         dependencies: [prepare-lma]
 
@@ -122,7 +120,7 @@ spec:
           - name: list
             value: |
               [
-                { "path": "thanos", "namespace": "lma" }
+                { "app_group": "lma", "path": "thanos", "namespace": "lma" }
               ]
         dependencies: [prometheus,logging]
 
@@ -135,6 +133,6 @@ spec:
           - name: list
             value: |
               [
-                { "path": "grafana", "namespace": "lma" }
+                { "app_group": "lma", "path": "grafana", "namespace": "lma" }
               ]
         dependencies: [federation]

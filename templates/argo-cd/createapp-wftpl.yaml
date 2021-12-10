@@ -8,8 +8,6 @@ spec:
     parameters:
     - name: site_name
       value: "hanu-deploy-apps"
-    - name: app_group
-      value: "lma"
     - name: manifest_repo_url
       value: "https://github.com/openinfradev/decapod-manifests"
     - name: revision
@@ -18,7 +16,13 @@ spec:
   - name: createApp
     inputs:
       parameters:
+      - name: app_group
+      # TODO: if input default doesn't work, then try "template default"
+      # https://argoproj.github.io/argo-workflows/template-defaults/
+      - name: app_prefix
+        #value: "{{ workflow.parameters.site_name }}"
       - name: path
+      - name: target_cluster  # set to site_name by default
       - name: namespace
     activeDeadlineSeconds: 900
     container:
@@ -33,14 +37,24 @@ spec:
         ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
         --password $ARGO_PASSWORD
 
-        ARGOCD_APP_NAME=${SITE_NAME:0:8}-$PATH
-        ARGOCD_APP_LABEL=${SITE_NAME:0:8}-$APP_NAME
+        TARGET_CLUSTER="{{workflow.parameters.site_name}}"
+        if [[ -n "{{inputs.parameters.target_cluster}}" ]]; then
+          TARGET_CLUSTER="{{inputs.parameters.target_cluster}}"
+        fi
 
-        # check if app already exists.
+        # TODO: another option is to set default app_prefix to 'site_name' and always apply that prefix.
+        ARGOCD_APP_NAME=$PATH
+        ARGOCD_APP_LABEL=$APP_GROUP
+        if [[ -n "{{inputs.parameters.app_prefix}}" ]]; then
+          ARGOCD_APP_NAME="{{inputs.parameters.app_prefix}}-$PATH"
+          ARGOCD_APP_LABEL="{{inputs.parameters.app_prefix}}-$APP_GROUP"
+        fi
+
+        # check if the argocd app already exists.
         ./argocd app get $ARGOCD_APP_NAME
         if [[ $? -ne 0 ]]; then
-          # create new application if not exists.
-          ./argocd app create $ARGOCD_APP_NAME --repo $REPO --revision $REVISION --path $SITE_NAME/$APP_NAME/$PATH --dest-namespace $NAMESPACE --dest-name $SITE_NAME --project $APP_NAME --label app=$ARGOCD_APP_LABEL --directory-recurse
+          # create new application if it doesn't exist.
+          ./argocd app create $ARGOCD_APP_NAME --repo $REPO --revision $REVISION --path $SITE_NAME/$APP_GROUP/$PATH --dest-namespace $NAMESPACE --dest-name $TARGET_CLUSTER --project $APP_GROUP --label app=$ARGOCD_APP_LABEL --directory-recurse
         fi
 
         ./argocd app set $ARGOCD_APP_NAME --sync-policy automated --auto-prune
@@ -50,18 +64,18 @@ spec:
         - secretRef:
             name: "decapod-argocd-config"
       env:
-        - name: PATH
-          value: "{{inputs.parameters.path}}"
         - name: SITE_NAME
           value: "{{workflow.parameters.site_name}}"
-        - name: APP_NAME
-          value: "{{workflow.parameters.app_group}}"
-        - name: NAMESPACE
-          value: "{{inputs.parameters.namespace}}"
         - name: REPO
           value: "{{workflow.parameters.manifest_repo_url}}"
         - name: REVISION
           value: "{{workflow.parameters.revision}}"
+        - name: APP_GROUP
+          value: "{{inputs.parameters.app_group}}"
+        - name: PATH
+          value: "{{inputs.parameters.path}}"
+        - name: NAMESPACE
+          value: "{{inputs.parameters.namespace}}"
 
   - name: installApps
     inputs:
@@ -72,6 +86,9 @@ spec:
         template: createApp
         arguments:
           parameters:
+          - {name: app_group, value: "{{item.app_group}}"}
+          - {name: app_prefix, value: "{{item.app_prefix}}"}
           - {name: path, value: "{{item.path}}"}
           - {name: namespace, value: "{{item.namespace}}"}
+          - {name: target_cluster, value: "{{item.target_cluster}}"}
         withParam: "{{inputs.parameters.list}}"
