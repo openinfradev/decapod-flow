@@ -9,6 +9,9 @@ spec:
     parameters:
     - name: site_name
       value: "hanu-reference"
+    # valid value: 'efk' or 'loki'
+    - name: logging_component
+      value: "efk"
     - name: site_repo_url
       value: "https://github.com/openinfradev/decapod-site"
     - name: manifest_repo_url
@@ -50,7 +53,7 @@ spec:
   - name: deploy
     dag:
       tasks:
-      - name: operator
+      - name: prometheus-operator
         templateRef:
           name: create-application
           template: installApps
@@ -59,12 +62,26 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "lma", "path": "prometheus-operator", "namespace": "lma"  },
+                { "app_group": "lma", "path": "prometheus-operator", "namespace": "lma" }
+              ]
+        dependencies: []
+
+      - name: eck-operator
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters: 
+          - name: list
+            value: |
+              [
                 { "app_group": "lma", "path": "eck-operator", "namespace": "elastic-system" },
                 { "app_group": "lma", "path": "fluentbit-operator", "namespace": "lma" }
               ]
+        when: "{{workflow.parameters.logging_component}} == 'efk'"
         dependencies: []
-      - name: logging
+
+      - name: logging-efk
         templateRef:
           name: create-application
           template: installApps
@@ -77,7 +94,25 @@ spec:
                 { "app_group": "lma", "path": "fluentbit", "namespace": "lma" },
                 { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma" }
               ]
-        dependencies: [operator]
+        when: "{{workflow.parameters.logging_component}} == 'efk'"
+        dependencies: [eck-operator]
+
+      - name: logging-loki
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "lma", "path": "loki", "namespace": "lma" },
+                { "app_group": "lma", "path": "promtail", "namespace": "lma" },
+                { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma" }
+              ]
+        when: "{{workflow.parameters.logging_component}} == 'loki'"
+        dependencies: []
+
       - name: prepare-lma
         templateRef:
           name: create-application
@@ -90,7 +125,7 @@ spec:
                 { "app_group": "lma", "path": "thanos-config", "namespace": "lma" },
                 { "app_group": "lma", "path": "prepare-etcd-secret", "namespace": "lma" }
               ]
-        dependencies: [operator]
+        dependencies: [prometheus-operator]
 
       - name: prometheus
         templateRef:
@@ -122,7 +157,7 @@ spec:
               [
                 { "app_group": "lma", "path": "thanos", "namespace": "lma" }
               ]
-        dependencies: [prometheus,logging]
+        dependencies: [prometheus,"logging-{{workflow.parameters.logging_component}}"]
 
       - name: grafana
         templateRef:
