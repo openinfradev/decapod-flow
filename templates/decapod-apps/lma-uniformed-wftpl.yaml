@@ -18,6 +18,8 @@ spec:
       value: "https://github.com/openinfradev/decapod-manifests"
     - name: revision
       value: main
+    - name: app_prefix
+      value: ""
   templates:
   - name: prepare
     inputs: {}
