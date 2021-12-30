@@ -85,7 +85,6 @@ spec:
         arguments:
           parameters:
           - {name: app_group, value: "{{item.app_group}}"}
-          - {name: app_prefix, value: "{{item.app_prefix}}"}
           - {name: path, value: "{{item.path}}"}
           - {name: namespace, value: "{{item.namespace}}"}
           - {name: target_cluster, value: "{{item.target_cluster}}"}
