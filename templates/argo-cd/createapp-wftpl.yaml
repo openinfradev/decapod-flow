@@ -12,15 +12,13 @@ spec:
       value: "https://github.com/openinfradev/decapod-manifests"
     - name: revision
       value: "main"
+    - name: app_prefix
+      value: ""
   templates:
   - name: createApp
     inputs:
       parameters:
       - name: app_group
-      # TODO: if input default doesn't work, then try "template default"
-      # https://argoproj.github.io/argo-workflows/template-defaults/
-      - name: app_prefix
-        #value: "{{ workflow.parameters.site_name }}"
       - name: path
       - name: target_cluster  # set to site_name by default
       - name: namespace
@@ -45,9 +43,9 @@ spec:
         # TODO: another option is to set default app_prefix to 'site_name' and always apply that prefix.
         ARGOCD_APP_NAME=$PATH
         ARGOCD_APP_LABEL=$APP_GROUP
-        if [[ -n "{{inputs.parameters.app_prefix}}" ]]; then
-          ARGOCD_APP_NAME="{{inputs.parameters.app_prefix}}-$PATH"
-          ARGOCD_APP_LABEL="{{inputs.parameters.app_prefix}}-$APP_GROUP"
+        if [[ -n "{{workflow.parameters.app_prefix}}" ]]; then
+          ARGOCD_APP_NAME="{{workflow.parameters.app_prefix}}-$PATH"
+          ARGOCD_APP_LABEL="{{workflow.parameters.app_prefix}}-$APP_GROUP"
         fi
 
         # check if the argocd app already exists.
@@ -87,7 +85,6 @@ spec:
         arguments:
           parameters:
           - {name: app_group, value: "{{item.app_group}}"}
-          - {name: app_prefix, value: "{{item.app_prefix}}"}
           - {name: path, value: "{{item.path}}"}
           - {name: namespace, value: "{{item.namespace}}"}
           - {name: target_cluster, value: "{{item.target_cluster}}"}
