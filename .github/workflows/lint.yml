@@ -1,0 +1,81 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Lint
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
+          
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v13.1
+
+      # Runs a set of commands using the runners shell
+      - name: Install Argo CLI
+        run: |
+          # Download the binary
+          curl -sLO https://github.com/argoproj/argo-workflows/releases/download/v3.1.9/argo-linux-amd64.gz
+
+          # Unzip
+          gunzip argo-linux-amd64.gz
+
+          # Make binary executable
+          chmod +x argo-linux-amd64
+
+          # Move binary to path
+          mv ./argo-linux-amd64 /usr/local/bin/argo
+
+          # Test installation
+          argo version
+
+      # Make fake kubeconfig for executing argo cli
+      - name: Make fake kubeconfig
+        run: |
+          cat <<EOF > /tmp/fakekubeconfig
+          apiVersion: v1
+          kind: Config
+          clusters:
+          - cluster:
+              certificate-authority-data: ZHVtbXkK
+              server: https://localhost:6443
+            name: dummy
+          contexts:
+          - context:
+              cluster: dummy
+              user: dummy
+            name: dummy
+          current-context: dummy
+          preferences: {}
+          users:
+          - name: dummy
+            user:
+              username: dummy
+              password: dummy
+          EOF
+          cat /tmp/fakekubeconfig
+          
+      # Runs a Lint command
+      - name: Lint changed file
+        run: |
+          argo template lint --kubeconfig /tmp/fakekubeconfig ${{ steps.changed-files.outputs.all_changed_files }}
