@@ -110,7 +110,7 @@ spec:
               [
                 { "app_group": "lma", "path": "loki", "namespace": "lma" },
                 { "app_group": "lma", "path": "promtail", "namespace": "lma" },
-                { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma" }
+                { "app_group": "lma", "path": "eventrouter", "namespace": "lma" }
               ]
         when: "{{workflow.parameters.logging_component}} == 'loki'"
         dependencies: []
