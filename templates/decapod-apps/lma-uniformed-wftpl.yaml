@@ -60,11 +60,11 @@ spec:
           name: create-application
           template: installApps
         arguments:
-          parameters: 
+          parameters:
           - name: list
             value: |
               [
-                { "app_group": "lma", "path": "prometheus-operator", "namespace": "lma" }
+                { "app_group": "lma", "path": "prometheus-operator", "namespace": "lma", "target_cluster": "" }
               ]
         dependencies: []
 
@@ -73,12 +73,12 @@ spec:
           name: create-application
           template: installApps
         arguments:
-          parameters: 
+          parameters:
           - name: list
             value: |
               [
-                { "app_group": "lma", "path": "eck-operator", "namespace": "elastic-system" },
-                { "app_group": "lma", "path": "fluentbit-operator", "namespace": "lma" }
+                { "app_group": "lma", "path": "eck-operator", "namespace": "elastic-system", "target_cluster": "" },
+                { "app_group": "lma", "path": "fluentbit-operator", "namespace": "lma", "target_cluster": "" }
               ]
         when: "{{workflow.parameters.logging_component}} == 'efk'"
         dependencies: []
@@ -88,13 +88,13 @@ spec:
           name: create-application
           template: installApps
         arguments:
-          parameters: 
+          parameters:
           - name: list
             value: |
               [
-                { "app_group": "lma", "path": "eck-resource", "namespace": "lma" },
-                { "app_group": "lma", "path": "fluentbit", "namespace": "lma" },
-                { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma" }
+                { "app_group": "lma", "path": "eck-resource", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "fluentbit", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma", "target_cluster": "" }
               ]
         when: "{{workflow.parameters.logging_component}} == 'efk'"
         dependencies: [eck-operator]
@@ -108,9 +108,9 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "lma", "path": "loki", "namespace": "lma" },
-                { "app_group": "lma", "path": "promtail", "namespace": "lma" },
-                { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma" }
+                { "app_group": "lma", "path": "loki", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "promtail", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "eventrouter", "namespace": "lma", "target_cluster": "" }
               ]
         when: "{{workflow.parameters.logging_component}} == 'loki'"
         dependencies: []
@@ -120,12 +120,12 @@ spec:
           name: create-application
           template: installApps
         arguments:
-          parameters: 
+          parameters:
           - name: list
             value: |
               [
-                { "app_group": "lma", "path": "thanos-config", "namespace": "lma" },
-                { "app_group": "lma", "path": "prepare-etcd-secret", "namespace": "lma" }
+                { "app_group": "lma", "path": "thanos-config", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "prepare-etcd-secret", "namespace": "lma", "target_cluster": "" }
               ]
         dependencies: [prometheus-operator]
 
@@ -134,17 +134,17 @@ spec:
           name: create-application
           template: installApps
         arguments:
-          parameters: 
+          parameters:
           - name: list
             value: |
               [
-                { "app_group": "lma", "path": "prometheus", "namespace": "lma" },
-                { "app_group": "lma", "path": "kube-state-metrics", "namespace": "lma" },
-                { "app_group": "lma", "path": "prometheus-process-exporter", "namespace": "lma" },
-                { "app_group": "lma", "path": "prometheus-pushgateway", "namespace": "lma" },
-                { "app_group": "lma", "path": "prometheus-node-exporter", "namespace": "lma" },
-                { "app_group": "lma", "path": "prometheus-adapter", "namespace": "lma" },
-                { "app_group": "lma", "path": "addons", "namespace": "lma" }
+                { "app_group": "lma", "path": "prometheus", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "kube-state-metrics", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "prometheus-process-exporter", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "prometheus-pushgateway", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "prometheus-node-exporter", "namespace": "lma", "target_cluster": ""},
+                { "app_group": "lma", "path": "prometheus-adapter", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "addons", "namespace": "lma", "target_cluster": "" }
               ]
         dependencies: [prepare-lma]
 
@@ -153,11 +153,11 @@ spec:
           name: create-application
           template: installApps
         arguments:
-          parameters: 
+          parameters:
           - name: list
             value: |
               [
-                { "app_group": "lma", "path": "thanos", "namespace": "lma" }
+                { "app_group": "lma", "path": "thanos", "namespace": "lma", "target_cluster": "" }
               ]
         dependencies: [prometheus,"logging-{{workflow.parameters.logging_component}}"]
 
@@ -166,10 +166,10 @@ spec:
           name: create-application
           template: installApps
         arguments:
-          parameters: 
+          parameters:
           - name: list
             value: |
               [
-                { "app_group": "lma", "path": "grafana", "namespace": "lma" }
+                { "app_group": "lma", "path": "grafana", "namespace": "lma", "target_cluster": "" }
               ]
         dependencies: [federation]
