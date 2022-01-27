@@ -8,20 +8,17 @@ spec:
   entrypoint: process
   arguments:
     parameters:
-    - name: project
-      value: "lma"
+    # Filter to filter argocd apps (E.g., "app=lma")
     - name: filter
-      value: ""
+      value: "app=lma"
   templates:
   - name: process
     steps:
     - - name: removeLMA
         templateRef:
-          name: delete-project
-          template: DeleteProject
+          name: delete-apps
+          template: DeleteAppsByLabel
         arguments:
           parameters: 
-          - name: project
-            value: "{{ workflow.parameters.project }}"
           - name: filter
             value: "{{ workflow.parameters.filter }}"
