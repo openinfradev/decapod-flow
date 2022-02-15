@@ -4,226 +4,298 @@ metadata:
   name: remove-servicemesh-all
   namespace: argo
 spec:
-  entrypoint: delete-start
+  entrypoint: remove-start
   arguments:
     parameters:
-      - name: iop_controlplane_name
-        value: istio-controlplane
-      - name: iop_gateway_name
-        value: istio-ingress-gateway
-      - name: revision
-        value: 1-10-2
-      - name: namespace
-        value: istio-system
-      - name: kube_version
-        value: v1.18.6
+    # - name: site_name
+    #   value: hanu-reference
+    # - name: app_group
+    #   value: service-mesh
+    # - name: iop_controlplane_name
+    #   value: istio-controlplane
+    # - name: iop_gateway_name
+    #   value: istio-ingress-gateway
+    # - name: revision
+    #   value: 1-11-7
+    # - name: namespace
+    #   value: istio-system
+    # - name: app_prefix
+    #   value: ""
+    # - name: cluster_id
+    #   value: ""
+
+    - name: cluster_id
+      value: ""
+    - name: app_prefix
+      value: ""
+    - name: filter
+      value: "app=service-mesh"
+
   templates:
-    - name: delete-start
-      steps:
-        - - name: delete-argocd-app
-            template: delete-argocd-app
-            arguments:
-              parameters:
-                - name: app_group
-                  value: service-mesh
-        - - name: delete-finalizer-app
-            template: delete-finalizer-app
-            arguments:
-              parameters:
-                - name: namespace
-                  value: '{{workflow.parameters.namespace}}'
-        - - name: delete-kuberentes-gateway
-            template: delete-kubernetes-resources
-            arguments:
-              parameters:
-                - name: component_name
-                  value: '{{workflow.parameters.iop_gateway_name}}'
-                - name: component_type
-                  value: gateway
-        - - name: delete-kubernetes-controlplane
-            template: delete-kubernetes-resources
-            arguments:
-              parameters:
-                - name: component_name
-                  value: '{{workflow.parameters.iop_controlplane_name}}'
-                - name: component_type
-                  value: controlplane
-        - - name: delete-namespace
-            template: delete-namespace
-            arguments:
-              parameters:
-                - name: namespace
-                  value: '{{workflow.parameters.namespace}}'
-    - name: delete-kubernetes-resources
-      inputs:
-        parameters:
-          - name: component_name
-          - name: component_type
-      container:
-        name: delete-kubernetes-resources
-        image: 'k8s.gcr.io/hyperkube:{{workflow.parameters.kube_version}}'
-        command:
-          - /bin/bash
-          - '-c'
-          - |
-            function log() {
-              level=$1
-              msg=$2
-              date=$(date '+%F %H:%M:%S')
-              echo "[$date] $level     $msg"
-            }
-            function deleteGateway() {
-              log "INFO" "deleteGateway() called!"
-              log "INFO" "REVISION = [${REVISION}]"
-              log "INFO" "COMPONENT_NAME = [${COMPONENT_NAME}]"
-              log "INFO" "NAMESPACE = [${NAMESPACE}]"
-              LABELS="istio.io/rev=${REVISION},operator.istio.io/component=IngressGateways"
-              kubectl patch istiooperators ${COMPONENT_NAME}-${REVISION} -n ${NAMESPACE} --type merge -p '{"metadata":{"finalizers": [null]}}'
-              kubectl delete istiooperators ${COMPONENT_NAME}-${REVISION} -n ${NAMESPACE}
-              kubectl delete deployments -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete services -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete hpa -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete poddisruptionbudgets -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete serviceaccounts -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete rolebindings -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete roles -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete helmreleases service-mesh-gateway -n default
-            }
-            function deleteControlplane() {
-              log "INFO" "deleteControlplane() called!"
-              log "INFO" "REVISION = [${REVISION}]"
-              log "INFO" "COMPONENT_NAME = [${COMPONENT_NAME}]"
-              log "INFO" "NAMESPACE = [${NAMESPACE}]"
-              LABELS="istio.io/rev=${REVISION},operator.istio.io/component=Pilot"
-              kubectl patch istiooperators ${COMPONENT_NAME}-${REVISION} -n ${NAMESPACE} --type merge -p '{"metadata":{"finalizers": [null]}}'
-              kubectl delete istiooperators ${COMPONENT_NAME}-${REVISION} -n ${NAMESPACE}
-              kubectl delete deployments -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete services -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete hpa -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete configmaps -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete poddisruptionbudgets -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete envoyfilters -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete mutatingwebhookconfigurations -l ${LABELS}
-              kubectl delete serviceaccounts -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete rolebindings -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete roles -n ${NAMESPACE} -l ${LABELS}
-              kubectl delete clusterrolebindings -l ${LABELS}
-              kubectl delete clusterroles -l ${LABELS}
-              kubectl delete helmreleases service-mesh-controlplane -n default
-            }
-            # delete Kubernetes resources
-            if [[ ! -z "$COMPONENT_NAME" ]]; then
-              if [[ ${COMPONENT_TYPE} =~ controlplane ]]; then
-                log "INFO" "delete istio Controlplane"
-                deleteControlplane
-              elif [[ ${COMPONENT_TYPE} =~ gateway ]]; then
-                log "INFO" "delete istio Gateway"
-                deleteGateway
-              else
-                log "ERROR" "${COMPONENT_TYPE} does'nt exist."
-                exit 1
-              fi
+  #=========================================================
+  # Template Pipeline
+  #=========================================================
+  - name: remove-start
+    steps:
+    - - name: remove-service-mesh-app
+        templateRef:
+          name: delete-apps
+          template: DeleteAppsByLabel
+
+    # - - name: delete-argocd-app
+    #     template: delete-argocd-app
+    #     arguments:
+    #       parameters:
+    #       - name: app_group
+    #         value: service-mesh
+    
+    # - - name: delete-finalizer-app
+    #     template: delete-finalizer-app
+    #     arguments:
+    #       parameters:
+    #       - name: namespace
+    #         value: '{{workflow.parameters.namespace}}'
+    
+    # - - name: delete-kuberentes-gateway
+    #     template: delete-kubernetes-resources
+    #     arguments:
+    #       parameters:
+    #       - name: component_name
+    #         value: '{{workflow.parameters.iop_gateway_name}}'
+    #       - name: component_type
+    #         value: gateway
+    
+    # - - name: delete-kubernetes-controlplane
+    #     template: delete-kubernetes-resources
+    #     arguments:
+    #       parameters:
+    #       - name: component_name
+    #         value: '{{workflow.parameters.iop_controlplane_name}}'
+    #       - name: component_type
+    #         value: controlplane
+    
+    - - name: delete-namespace
+        template: delete-namespace
+        arguments:
+          parameters:
+          - name: namespace
+            value: istio-system
+
+    # - - name: delete-namespace
+    #     template: delete-namespace
+    #     arguments:
+    #       parameters:
+    #       - name: namespace
+    #         value: '{{workflow.parameters.namespace}}'
+  
+  #=========================================================
+  # Template Definition
+  #=========================================================
+  - name: delete-argocd-app
+    inputs:
+      parameters:
+      - name: app_group
+    container:
+      name: delete-argocd-app
+      image: 'docker.io/sktdev/argocd:latest'
+      command:
+        - /bin/bash
+        - '-c'
+        - |
+          function log() {
+            level=$1
+            msg=$2
+            date=$(date '+%F %H:%M:%S')
+            echo "[$date] $level     $msg"
+          }
+          ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
+          --password $ARGO_PASSWORD
+
+          app_label=""
+          if [[ -n "{{ workflow.parameters.app_prefix }}" ]]; then
+            app_label+="-l app={{ workflow.parameters.app_prefix }}-service-mesh"
+          fi
+
+          ./argocd app list -p $APP_NAME $app_label -o name | xargs ./argocd app delete -y
+          
+          log "INFO" "deleting argocd app"
+      envFrom:
+      - secretRef:
+          name: decapod-argocd-config
+      env:
+      - name: APP_NAME
+        value: "{{inputs.parameters.app_group}}"
+    activeDeadlineSeconds: 900
+    retryStrategy:
+      limit: 2
+  
+  - name: delete-finalizer-app
+    inputs:
+      parameters:
+      - name: namespace
+    container:
+      name: delete-finalizer-app
+      image: 'gcr.io/google-containers/hyperkube:v1.18.6'
+      command:
+        - /bin/bash
+        - '-c'
+        - |
+          function log() {
+            level=$1
+            msg=$2
+            date=$(date '+%F %H:%M:%S')
+            echo "[$date] $level     $msg"
+          }
+
+          kube_params=""
+          if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
+            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
+            echo -e "kube_secret:\n$kube_secret" | head -n 5
+            cat <<< "$kube_secret" > /etc/kubeconfig
+            kube_params+="--kubeconfig=/etc/kubeconfig"
+          fi
+
+          app_prefix=""
+          if [[ -n "{{ workflow.parameters.app_prefix }}" ]]; then
+            app_prefix+="{{ workflow.parameters.app_prefix }}-"
+          fi
+          
+          kubectl patch app ${app_prefix}servicemesh-kiali-resource -n argo --type json -p '[{ "op": "remove", "path": "/metadata/finalizers" }]'
+          kubectl patch app ${app_prefix}servicemesh-gateway -n argo --type json -p '[{ "op": "remove", "path": "/metadata/finalizers" }]'
+          kubectl patch app ${app_prefix}servicemesh-controlplane -n argo --type json -p '[{ "op": "remove", "path": "/metadata/finalizers" }]'
+          kubectl $kube_params patch kialis kiali -n ${NAMESPACE} --type json -p '[{ "op": "remove", "path": "/metadata/finalizers" }]'
+          
+          log "INFO" "argocd apps and kialis finalizers successfully deleted."
+      env:
+      - name: NAMESPACE
+        value: '{{inputs.parameters.namespace}}'
+    activeDeadlineSeconds: 900
+    retryStrategy:
+      limit: 2
+
+  - name: delete-kubernetes-resources
+    inputs:
+      parameters:
+      - name: component_name
+      - name: component_type
+    container:
+      name: delete-kubernetes-resources
+      image: 'gcr.io/google-containers/hyperkube:v1.18.6'
+      command:
+        - /bin/bash
+        - '-c'
+        - |
+          kube_params=""
+          if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
+            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
+            echo -e "kube_secret:\n$kube_secret" | head -n 5
+            cat <<< "$kube_secret" > /etc/kubeconfig
+            kube_params+="--kubeconfig=/etc/kubeconfig"
+          fi
+          function log() {
+            level=$1
+            msg=$2
+            date=$(date '+%F %H:%M:%S')
+            echo "[$date] $level     $msg"
+          }
+          function deleteGateway() {
+            log "INFO" "deleteGateway() called!"
+            log "INFO" "REVISION = [${REVISION}]"
+            log "INFO" "COMPONENT_NAME = [${COMPONENT_NAME}]"
+            log "INFO" "NAMESPACE = [${NAMESPACE}]"
+            LABELS="istio.io/rev=${REVISION},operator.istio.io/component=IngressGateways"
+            kubectl $kube_params patch istiooperators ${COMPONENT_NAME}-${REVISION} -n ${NAMESPACE} --type json -p '[{ "op": "remove", "path": "/metadata/finalizers" }]'
+            kubectl $kube_params delete istiooperators ${COMPONENT_NAME}-${REVISION} -n ${NAMESPACE}
+            kubectl $kube_params delete deployments -n ${NAMESPACE} -l ${LABELS}
+            kubectl $kube_params delete services -n ${NAMESPACE} -l ${LABELS}
+            kubectl $kube_params delete hpa -n ${NAMESPACE} -l ${LABELS}
+            kubectl $kube_params delete poddisruptionbudgets -n ${NAMESPACE} -l ${LABELS}
+            kubectl $kube_params delete serviceaccounts -n ${NAMESPACE} -l ${LABELS}
+            kubectl $kube_params delete rolebindings -n ${NAMESPACE} -l ${LABELS}
+            kubectl $kube_params delete roles -n ${NAMESPACE} -l ${LABELS}
+          }
+          function deleteControlplane() {
+            log "INFO" "deleteControlplane() called!"
+            log "INFO" "REVISION = [${REVISION}]"
+            log "INFO" "COMPONENT_NAME = [${COMPONENT_NAME}]"
+            log "INFO" "NAMESPACE = [${NAMESPACE}]"
+            LABELS="istio.io/rev=${REVISION},operator.istio.io/component=Pilot"
+            kubectl $kube_params patch istiooperators ${COMPONENT_NAME}-${REVISION} -n ${NAMESPACE} --type json -p '[{ "op": "remove", "path": "/metadata/finalizers" }]'
+            kubectl $kube_params delete istiooperators ${COMPONENT_NAME}-${REVISION} -n ${NAMESPACE}
+            kubectl $kube_params delete deployments -n ${NAMESPACE} -l ${LABELS}
+            kubectl $kube_params delete services -n ${NAMESPACE} -l ${LABELS}
+            kubectl $kube_params delete hpa -n ${NAMESPACE} -l ${LABELS}
+            kubectl $kube_params delete configmaps -n ${NAMESPACE} -l ${LABELS}
+            kubectl $kube_params delete poddisruptionbudgets -n ${NAMESPACE} -l ${LABELS}
+            kubectl $kube_params delete envoyfilters -n ${NAMESPACE} -l ${LABELS}
+            kubectl $kube_params delete mutatingwebhookconfigurations -l ${LABELS}
+            kubectl $kube_params delete serviceaccounts -n ${NAMESPACE} -l ${LABELS}
+            kubectl $kube_params delete rolebindings -n ${NAMESPACE} -l ${LABELS}
+            kubectl $kube_params delete roles -n ${NAMESPACE} -l ${LABELS}
+            kubectl $kube_params delete clusterrolebindings -l ${LABELS}
+            kubectl $kube_params delete clusterroles -l ${LABELS}
+          }
+          # delete Kubernetes resources
+          if [[ ! -z "$COMPONENT_NAME" ]]; then
+            if [[ ${COMPONENT_TYPE} =~ controlplane ]]; then
+              log "INFO" "delete istio Controlplane"
+              deleteControlplane
+            elif [[ ${COMPONENT_TYPE} =~ gateway ]]; then
+              log "INFO" "delete istio Gateway"
+              deleteGateway
+            else
+              log "ERROR" "${COMPONENT_TYPE} does'nt exist."
+              exit 1
             fi
+          fi
 
-            log "INFO" "${COMPONENT_NAME} successfully deleted."
-        env:
-          - name: COMPONENT_NAME
-            value: '{{inputs.parameters.component_name}}'
-          - name: COMPONENT_TYPE
-            value: '{{inputs.parameters.component_type}}'
-          - name: REVISION
-            value: '{{workflow.parameters.revision}}'
-          - name: NAMESPACE
-            value: '{{workflow.parameters.namespace}}'
-      activeDeadlineSeconds: 900
-      retryStrategy:
-        limit: 2
-    - name: delete-argocd-app
-      inputs:
-        parameters:
-          - name: app_group
-      container:
-        name: delete-argocd-app
-        image: docker.io/sktcloud/argocd-cli:v2.2.5
-        command:
-          - /bin/bash
-          - '-c'
-          - |
-            function log() {
-              level=$1
-              msg=$2
-              date=$(date '+%F %H:%M:%S')
-              echo "[$date] $level     $msg"
-            }
-            ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
-            --password $ARGO_PASSWORD
+          log "INFO" "${COMPONENT_NAME} successfully deleted."
+      env:
+      - name: COMPONENT_NAME
+        value: '{{inputs.parameters.component_name}}'
+      - name: COMPONENT_TYPE
+        value: '{{inputs.parameters.component_type}}'
+      - name: REVISION
+        value: '{{workflow.parameters.revision}}'
+      - name: NAMESPACE
+        value: '{{workflow.parameters.namespace}}'
+    activeDeadlineSeconds: 900
+    retryStrategy:
+      limit: 2
 
-            ./argocd app list -p $APP_NAME -o name | xargs ./argocd app delete -y
-            log "INFO" "deleting argocd app"
-        envFrom:
-          - secretRef:
-              name: decapod-argocd-config
-        env:
-        - name: APP_NAME
-          value: "{{inputs.parameters.app_group}}"
-      activeDeadlineSeconds: 900
-      retryStrategy:
-        limit: 2
-    - name: delete-finalizer-app
-      inputs:
-        parameters:
-          - name: namespace
-      container:
-        name: delete-finalizer-app
-        image: 'k8s.gcr.io/hyperkube:{{workflow.parameters.kube_version}}'
-        command:
-          - /bin/bash
-          - '-c'
-          - |
-            function log() {
-              level=$1
-              msg=$2
-              date=$(date '+%F %H:%M:%S')
-              echo "[$date] $level     $msg"
-            }
-            
-            kubectl patch app servicemesh-kiali-resource -n argo --type merge -p '{"metadata":{"finalizers": [null]}}'
-            kubectl patch app servicemesh-gateway -n argo --type merge -p '{"metadata":{"finalizers": [null]}}'
-            kubectl patch app servicemesh-controlplane -n argo --type merge -p '{"metadata":{"finalizers": [null]}}'
-            kubectl patch kialis kiali -n ${NAMESPACE} --type merge -p '{"metadata":{"finalizers": [null]}}'
-            
-            log "INFO" "argocd apps and kialis finalizers successfully deleted."
-        env:
-          - name: NAMESPACE
-            value: '{{inputs.parameters.namespace}}'
-      activeDeadlineSeconds: 900
-      retryStrategy:
-        limit: 2
-    - name: delete-namespace
-      inputs:
-        parameters:
-          - name: namespace
-      container:
-        name: delete-namespace
-        image: 'k8s.gcr.io/hyperkube:{{workflow.parameters.kube_version}}'
-        command:
-          - /bin/bash
-          - '-c'
-          - |
-            function log() {
-              level=$1
-              msg=$2
-              date=$(date '+%F %H:%M:%S')
-              echo "[$date] $level     $msg"
-            }
-            
-            kubectl delete ns ${NAMESPACE}
-            
-            log "INFO" "${NAMESPACE} successfully deleted."
-        env:
-          - name: NAMESPACE
-            value: '{{inputs.parameters.namespace}}'
-      activeDeadlineSeconds: 900
-      retryStrategy:
-        limit: 2
+  - name: delete-namespace
+    inputs:
+      parameters:
+      - name: namespace
+    container:
+      name: delete-namespace
+      image: 'gcr.io/google-containers/hyperkube:v1.18.6'
+      command:
+        - /bin/bash
+        - '-c'
+        - |
+          function log() {
+            level=$1
+            msg=$2
+            date=$(date '+%F %H:%M:%S')
+            echo "[$date] $level     $msg"
+          }
+          
+          kube_params=""
+          if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
+            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
+            echo -e "kube_secret:\n$kube_secret" | head -n 5
+            cat <<< "$kube_secret" > /etc/kubeconfig
+            kube_params+="--kubeconfig=/etc/kubeconfig"
+          fi
+
+          kubectl $kube_params delete ns ${NAMESPACE}
+          
+          log "INFO" "${NAMESPACE} successfully deleted."
+      env:
+      - name: NAMESPACE
+        value: '{{inputs.parameters.namespace}}'
+    activeDeadlineSeconds: 900
+    retryStrategy:
+      limit: 2
 
