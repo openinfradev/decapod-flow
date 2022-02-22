@@ -75,9 +75,9 @@ spec:
             ./argocd proj create sealed-secrets --dest "*,*" --src "*" --allow-cluster-resource "*/*"
           fi
 
-          ./argocd proj get tks-cluster
+          ./argocd proj get tks-cluster-aws
           if [[ $? != 0 ]]; then
-            ./argocd proj create tks-cluster --dest "*,*" --src "*" --allow-cluster-resource "*/*"
+            ./argocd proj create tks-cluster-aws --dest "*,*" --src "*" --allow-cluster-resource "*/*"
           fi          
       env:
         - name: ARGO_SERVER
