@@ -46,7 +46,7 @@ spec:
   - name: createProject
     container:
       name: create
-      image: 'docker.io/sktdev/argocd:latest'
+      image: 'docker.io/sktcloud/argocd-cli:v2.2.5'
       imagePullPolicy: IfNotPresent
       command:
         - /bin/bash
