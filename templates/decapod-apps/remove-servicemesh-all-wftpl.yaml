@@ -144,7 +144,7 @@ spec:
           - name: app_group
       container:
         name: delete-argocd-app
-        image: 'docker.io/sktdev/argocd:latest'
+        image: docker.io/sktcloud/argocd-cli:v2.2.5
         command:
           - /bin/bash
           - '-c'
