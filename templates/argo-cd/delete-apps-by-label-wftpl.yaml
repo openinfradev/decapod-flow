@@ -27,8 +27,8 @@ spec:
         if [[ $? -eq 0 && -n $app_list ]]; then
           echo "Found apps with label '$FILTER'.. Start deleting apps.."
         else
-          echo "No such label: $FILTER. Exiting.."
-          exit 1
+          echo "No such label: $FILTER. Skipping app removal.."
+          exit 0
         fi
 
         deleted=False
