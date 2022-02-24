@@ -22,3 +22,25 @@ spec:
           parameters: 
           - name: filter
             value: "{{ workflow.parameters.filter }}"
+
+      # LMA appGroup specific task #
+    - - name: cleanupLeftoverResources
+        template: removeLeftoverResources
+        arguments:
+          parameters:
+          - name: namespace
+            value:  "lma"
+
+  - name: removeLeftoverResources
+    inputs:
+      parameters:
+        - name: namespace
+    container:
+      name: remove-leftover
+      image: 'k8s.gcr.io/hyperkube:v1.18.6'
+      command:
+        - /bin/bash
+        - '-c'
+        - |
+          kubectl delete secret etcd-client-cert prometheus-operator-admission -n {{inputs.parameters.namespace}} || true
+          kubectl delete pvc --all -n {{inputs.parameters.namespace}}
