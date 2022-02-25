@@ -4,11 +4,13 @@ metadata:
   name: delete-apps
   namespace: argo
 spec:
+  arguments:
+    parameters:
+    # Filter to filter argocd apps (E.g., "app=lma")
+    - name: filter
+      value: ""
   templates:
   - name: DeleteAppsByLabel
-    inputs:
-      parameters:
-      - name: filter
     activeDeadlineSeconds: 900
     container:
       name: 'delete-apps'
@@ -33,10 +35,10 @@ spec:
 
         deleted=False
 
-        # Delete normal apps including CRs
+        # Delete normal apps except operators and CRs
         app_list=$(./argocd app list -l $FILTER --output name | grep -v operator)
         if [[ $? -eq 0 && -n $app_list ]]; then
-          echo "[1st phase] Deleting apps: $app_list"
+          echo -e "[1st phase] Deleting apps:\n$app_list"
           echo "$app_list" | xargs ./argocd app delete --cascade -y
 
           until [ $(./argocd app list -l $FILTER --output name | grep -v operator | wc -l) == 0 ]
@@ -51,10 +53,10 @@ spec:
           echo "No apps found except operators. Skipping 1st phase.."
         fi
 
-        # Delete operators
+        # Delete operators and CRs
         app_list=$(./argocd app list -l $FILTER --output name)
         if [[ $? -eq 0 && -n $app_list ]]; then
-          echo "[2nd phase] Deleting operators: $app_list"
+          echo -e "[2nd phase] Deleting operators:\n$app_list"
           echo "$app_list" | xargs ./argocd app delete --cascade -y
 
           until [ $(./argocd app list -l $FILTER --output name | wc -l) == 0 ]
@@ -78,4 +80,4 @@ spec:
             name: "decapod-argocd-config"
       env:
         - name: FILTER
-          value: "{{inputs.parameters.filter}}"
+          value: "{{workflow.parameters.filter}}"

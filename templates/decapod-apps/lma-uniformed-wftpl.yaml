@@ -22,9 +22,6 @@ spec:
       value: ""
   templates:
   - name: prepare
-    inputs: {}
-    outputs: {}
-    metadata: {}
     steps:
       - - name: configuration
           template: configuration
@@ -32,10 +29,12 @@ spec:
       - - name: deploy
           template: deploy
           arguments: {}
+
+  #######################
+  # Template Definition #
+  #######################
+
   - name: configuration
-    inputs: {}
-    outputs: {}
-    metadata: {}
     container:
       name: config
       image: 'k8s.gcr.io/hyperkube:v1.18.8'
@@ -52,6 +51,7 @@ spec:
       resources: {}
       imagePullPolicy: IfNotPresent
     activeDeadlineSeconds: 120
+
   - name: deploy
     dag:
       tasks:
