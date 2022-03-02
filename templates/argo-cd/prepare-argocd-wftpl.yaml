@@ -35,6 +35,8 @@ spec:
         --from-literal=ARGO_USERNAME=$ARGO_USERNAME \
         --from-literal=ARGO_PASSWORD=$ARGO_PASSWORD
 
+        kubectl annotate secret decapod-argocd-config -nargo kubed.appscode.com/sync="decapod-argocd-config=enabled"
+
       env:
       - name: ARGO_SERVER
         value: "{{workflow.parameters.argo_server}}"
