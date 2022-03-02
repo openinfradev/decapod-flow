@@ -1,4 +1,3 @@
-## Example workflow that calls delete-project template ##
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
@@ -8,28 +7,100 @@ spec:
   entrypoint: process
   arguments:
     parameters:
-    # Filter to filter argocd apps (E.g., "app=lma")
+    # 'cluster_id' is used for multi-cluster case
+    # TODO: better to rename this to 'site_name' later
+    - name: cluster_id
+      value: ""
+    - name: app_prefix
+      value: ""
+    # Filter to filter argocd apps
     - name: filter
       value: "app=lma"
   templates:
   - name: process
     steps:
+    - - name: disableAutoSyncOfPrometheus
+        template: disableAutoSync
+
+    # Delete prometheus CR first so that it doesn't hang
+    # due to earlier service-account deletion #
+    - - name: removePrometheusCR
+        template: removePrometheusCR
+        arguments:
+          parameters:
+          - name: namespace
+            value:  "lma"
+
+    # Remove argo CD apps
     - - name: removeLMA
         templateRef:
           name: delete-apps
           template: DeleteAppsByLabel
-        arguments:
-          parameters: 
-          - name: filter
-            value: "{{ workflow.parameters.filter }}"
 
-      # LMA appGroup specific task #
+    # Cleanup secrets and PVCs
     - - name: cleanupLeftoverResources
         template: removeLeftoverResources
         arguments:
           parameters:
           - name: namespace
             value:  "lma"
+
+  #######################
+  # Template Definition #
+  #######################
+
+  - name: disableAutoSync
+    container:
+      name: disable-auto-sync
+      image: docker.io/sktcloud/argocd-cli:v2.2.5
+      command:
+        - /bin/bash
+        - '-c'
+        - |
+          PROM_APP_NAME="prometheus"
+          if [[ -n "{{workflow.parameters.app_prefix}}" ]]; then
+            PROM_APP_NAME="{{workflow.parameters.app_prefix}}-prometheus"
+          fi
+          echo "[temp] ARGO_SERVER: $ARGO_SERVER"
+
+          # Login to Argo CD server
+          ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
+          --password $ARGO_PASSWORD
+
+          echo "Disabling auto-sync of [$PROM_APP_NAME]' app.."
+
+          # Disable auto-sync
+          ./argocd app set $PROM_APP_NAME --sync-policy none
+      envFrom:
+        - secretRef:
+            name: "decapod-argocd-config"
+
+  - name: removePrometheusCR
+    inputs:
+      parameters:
+        - name: namespace
+    container:
+      name: remove-prometheus-cr
+      image: k8s.gcr.io/hyperkube:v1.18.6
+      command:
+        - /bin/bash
+        - '-c'
+        - |
+          echo "Deleting prometheus CRs..."
+
+          kube_params=""
+
+          if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
+            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
+            echo -e "kube_secret:\n$kube_secret" | head -n 5
+            cat <<< "$kube_secret" > /etc/kubeconfig
+
+            kube_params+="--kubeconfig=/etc/kubeconfig"
+          fi
+
+          kubectl $kube_params delete prometheus --all -n {{inputs.parameters.namespace}}
+          kubectl $kube_params delete alertmanager --all -n {{inputs.parameters.namespace}}
+
 
   - name: removeLeftoverResources
     inputs:
@@ -42,5 +113,15 @@ spec:
         - /bin/bash
         - '-c'
         - |
-          kubectl delete secret etcd-client-cert prometheus-operator-admission -n {{inputs.parameters.namespace}} || true
-          kubectl delete pvc --all -n {{inputs.parameters.namespace}}
+          echo "Deleting secrets and PVCs..."
+
+          kube_params=""
+          if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
+            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
+            cat <<< "$kube_secret" > /etc/kubeconfig
+
+            kube_params+="--kubeconfig=/etc/kubeconfig"
+          fi
+
+          kubectl $kube_params delete secret etcd-client-cert prometheus-operator-admission -n {{inputs.parameters.namespace}} || true
+          kubectl $kube_params delete pvc --all -n {{inputs.parameters.namespace}}
