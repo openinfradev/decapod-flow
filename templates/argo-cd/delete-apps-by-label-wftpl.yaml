@@ -30,7 +30,7 @@ spec:
           echo "Found apps with label '$FILTER'.. Start deleting apps.."
         else
           echo "No such label: $FILTER. Skipping app removal.."
-          exit 0
+          exit 1
         fi
 
         deleted=False
