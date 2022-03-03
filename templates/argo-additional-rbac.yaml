@@ -75,3 +75,13 @@ rules:
   - get
   - delete
   - list
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - clusters
+  verbs:
+  - create
+  - get
+  - delete
+  - list
+  - watch
