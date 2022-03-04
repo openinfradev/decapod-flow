@@ -7,23 +7,6 @@ spec:
   entrypoint: remove-start
   arguments:
     parameters:
-    # - name: site_name
-    #   value: hanu-reference
-    # - name: app_group
-    #   value: service-mesh
-    # - name: iop_controlplane_name
-    #   value: istio-controlplane
-    # - name: iop_gateway_name
-    #   value: istio-ingress-gateway
-    # - name: revision
-    #   value: 1-11-7
-    # - name: namespace
-    #   value: istio-system
-    # - name: app_prefix
-    #   value: ""
-    # - name: cluster_id
-    #   value: ""
-
     - name: cluster_id
       value: ""
     - name: app_prefix
@@ -41,38 +24,6 @@ spec:
         templateRef:
           name: delete-apps
           template: DeleteAppsByLabel
-
-    # - - name: delete-argocd-app
-    #     template: delete-argocd-app
-    #     arguments:
-    #       parameters:
-    #       - name: app_group
-    #         value: service-mesh
-    
-    # - - name: delete-finalizer-app
-    #     template: delete-finalizer-app
-    #     arguments:
-    #       parameters:
-    #       - name: namespace
-    #         value: '{{workflow.parameters.namespace}}'
-    
-    # - - name: delete-kuberentes-gateway
-    #     template: delete-kubernetes-resources
-    #     arguments:
-    #       parameters:
-    #       - name: component_name
-    #         value: '{{workflow.parameters.iop_gateway_name}}'
-    #       - name: component_type
-    #         value: gateway
-    
-    # - - name: delete-kubernetes-controlplane
-    #     template: delete-kubernetes-resources
-    #     arguments:
-    #       parameters:
-    #       - name: component_name
-    #         value: '{{workflow.parameters.iop_controlplane_name}}'
-    #       - name: component_type
-    #         value: controlplane
     
     - - name: delete-namespace
         template: delete-namespace
@@ -80,13 +31,6 @@ spec:
           parameters:
           - name: namespace
             value: istio-system
-
-    # - - name: delete-namespace
-    #     template: delete-namespace
-    #     arguments:
-    #       parameters:
-    #       - name: namespace
-    #         value: '{{workflow.parameters.namespace}}'
   
   #=========================================================
   # Template Definition
