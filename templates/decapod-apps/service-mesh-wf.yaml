@@ -4,186 +4,215 @@ metadata:
   name: service-mesh
   namespace: argo
 spec:
-  entrypoint: deploy
+  entrypoint: deploy-start
   arguments:
     parameters:
-      - name: site_name
-        value: hanu-reference
-      - name: app_group
-        value: service-mesh
-      - name: manifest_repo_url
-        value: 'https://github.com/openinfradev/decapod-manifests'
-      - name: revision
-        value: main
+    - name: site_name
+      value: hanu-reference
+    - name: site_repo_url
+      value: "https://github.com/openinfradev/decapod-site"
+    - name: manifest_repo_url
+      value: 'https://github.com/openinfradev/decapod-manifests'
+    - name: revision
+      value: main
+    - name: cluster_id
+      value: ""
+    - name: app_prefix
+      value: ""
+
   templates:
-    - name: deploy
-      dag:
-        tasks:
-          - name: create-eck-secret
-            template: copy-eck-secret
-            arguments:
-              parameters:
-                - name: secret_name
-                  value: eck-elasticsearch-es-http-certs-public
-                - name: source_namespace
-                  value: lma
-                - name: target_namespace
-                  value: istio-system
-          - name: istio-operator
-            arguments:
-              parameters:
-                - name: list
-                  value: |
-                    [
-                      { "path": "istio-operator", "namespace": "istio-operator" }
-                    ]
-            templateRef:
-              name: create-application
-              template: installApps
-            dependencies:
-              - create-eck-secret
-          - name: istio-controlplane
-            arguments:
-              parameters:
-                - name: list
-                  value: |
-                    [
-                      { "path": "servicemesh-controlplane", "namespace": "istio-system" }
-                    ]
-            templateRef:
-              name: create-application
-              template: installApps
-            dependencies:
-              - istio-operator
-          - name: istio-gateway
-            arguments:
-              parameters:
-                - name: list
-                  value: |
-                    [
-                      { "path": "servicemesh-gateway", "namespace": "istio-system" }
-                    ]
-            templateRef:
-              name: create-application
-              template: installApps
-            dependencies:
-              - istio-controlplane
-          - name: jaeger-kiali-operator
-            arguments:
-              parameters:
-                - name: list
-                  value: |
-                    [
-                      { "path": "jaeger-operator", "namespace": "istio-system" },
-                      { "path": "kiali-operator", "namespace": "istio-system" }
-                    ]
-            templateRef:
-              name: create-application
-              template: installApps
-            dependencies:
-              - istio-controlplane
-          - name: servicemesh-jaeger-kiali-resource
-            arguments:
-              parameters:
-                - name: list
-                  value: |
-                    [
-                      { "path": "servicemesh-jaeger-resource", "namespace": "istio-system" },
-                      { "path": "servicemesh-kiali-resource", "namespace": "istio-system" }
-                    ]
-            templateRef:
-              name: create-application
-              template: installApps
-            dependencies:
-              - jaeger-kiali-operator
-          - name: grafana-prometheus-resource
-            arguments:
-              parameters:
-                - name: list
-                  value: |
-                    [
-                      { "path": "servicemesh-grafana-dashboard", "namespace": "istio-system" },
-                      { "path": "servicemesh-prometheusmonitor", "namespace": "istio-system" },
-                      { "path": "servicemesh-prometheusrule", "namespace": "istio-system" }
-                    ]
-            templateRef:
-              name: create-application
-              template: installApps
-            dependencies:
-              - jaeger-kiali-operator
-          - name: sync-app
-            template: sync-app
-            arguments: {}
-            dependencies:
-              - grafana-prometheus-resource
-    - name: copy-eck-secret
-      arguments: {}
-      inputs:
-        parameters:
+  #=========================================================
+  # Template Pipeline
+  #=========================================================
+  - name: deploy-start
+    steps:
+    - - name: create-eck-secret
+        template: copy-eck-secret
+        arguments:
+          parameters:
           - name: secret_name
+            value: eck-elasticsearch-es-http-certs-public
           - name: source_namespace
+            value: lma
           - name: target_namespace
-      outputs: {}
-      metadata: {}
-      container:
-        name: copy-eck-secret
-        image: 'k8s.gcr.io/hyperkube:v1.18.6'
-        command:
-          - /bin/bash
-          - '-c'
-          - |
-            function log() {
-              level=$1
-              msg=$2
-              date=$(date '+%F %H:%M:%S')
-              echo "[$date] $level     $msg"
-            }
+            value: istio-system
+    
+    - - name: deploy
+        template: deploy
+    
+    - - name: sync-app
+        template: sync-app
 
-            kubectl get ns ${TARGET_NAMESPACE}
-            if [[ $? =~ 1 ]]; then
-              kubectl create ns ${TARGET_NAMESPACE}
-              kubectl label ns ${TARGET_NAMESPACE} name=lma
-              log "INFO" "${TARGET_NAMESPACE} successfully created."
-            fi
+  #=========================================================
+  # Template Definition
+  #=========================================================
+  - name: deploy
+    dag:
+      tasks:
+      - name: istio-operator
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "service-mesh", "path": "istio-operator-crds", "namespace": "istio-operator", "target_cluster": "" },
+                { "app_group": "service-mesh", "path": "istio-operator", "namespace": "istio-operator", "target_cluster": "" }
+              ]
+      - name: istio-controlplane
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "service-mesh", "path": "servicemesh-controlplane", "namespace": "istio-system", "target_cluster": "" }
+              ]
+        dependencies:
+        - istio-operator
+      - name: istio-gateway
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "service-mesh", "path": "servicemesh-gateway", "namespace": "istio-system", "target_cluster": "" }
+              ]
+        dependencies:
+        - istio-controlplane
+      - name: jaeger-kiali-operator
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "service-mesh", "path": "jaeger-operator-crds", "namespace": "istio-system", "target_cluster": "" },
+                { "app_group": "service-mesh", "path": "kiali-operator-crds", "namespace": "istio-system", "target_cluster": "" },
+                { "app_group": "service-mesh", "path": "jaeger-operator", "namespace": "istio-system", "target_cluster": "" },
+                { "app_group": "service-mesh", "path": "kiali-operator", "namespace": "istio-system", "target_cluster": "" }
+              ]
+        dependencies:
+        - istio-controlplane
+      - name: servicemesh-jaeger-kiali-resource
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+            - name: list
+              value: |
+                [
+                  { "app_group": "service-mesh", "path": "servicemesh-jaeger-resource", "namespace": "istio-system", "target_cluster": "" },
+                  { "app_group": "service-mesh", "path": "servicemesh-kiali-resource", "namespace": "istio-system", "target_cluster": "" }
+                ]
+        dependencies:
+        - jaeger-kiali-operator
+      - name: grafana-prometheus-resource
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "service-mesh", "path": "servicemesh-grafana-dashboard", "namespace": "istio-system", "target_cluster": "" },
+                { "app_group": "service-mesh", "path": "servicemesh-prometheusmonitor", "namespace": "istio-system", "target_cluster": "" },
+                { "app_group": "service-mesh", "path": "servicemesh-prometheusrule", "namespace": "istio-system", "target_cluster": "" }
+              ]
+        dependencies:
+        - jaeger-kiali-operator
 
-            kubectl get secret ${SECRET_NAME}
-            if [[ $? =~ 1 ]]; then
-              kubectl get secret ${SECRET_NAME} -n ${SOURCE_NAMESPACE} -o yaml \
-              | grep -v '^\s*namespace:\s' \
-              | kubectl apply -n ${TARGET_NAMESPACE} -f -
-              log "INFO" "${SECRET_NAME} successfully created."
-            fi
-        env:
-          - name: SECRET_NAME
-            value: '{{inputs.parameters.secret_name}}'
-          - name: SOURCE_NAMESPACE
-            value: '{{inputs.parameters.source_namespace}}'
-          - name: TARGET_NAMESPACE
-            value: '{{inputs.parameters.target_namespace}}'
-        resources: {}
-      activeDeadlineSeconds: 900
-      retryStrategy:
-        limit: 2
-    - name: sync-app
-      arguments: {}
-      inputs: {}
-      outputs: {}
-      metadata: {}
-      container:
-        name: sync-app
-        image: docker.io/sktcloud/argocd-cli:v2.2.5
-        command:
-          - /bin/bash
-          - '-c'
-          - |
-            ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
-            --password $ARGO_PASSWORD
+  - name: copy-eck-secret
+    inputs:
+      parameters:
+      - name: secret_name
+        value: "eck-elasticsearch-es-http-certs-public"
+      - name: source_namespace
+        value: "lma"
+      - name: target_namespace
+        value: "istio-system"
+    container:
+      name: copy-eck-secret
+      image: 'k8s.gcr.io/hyperkube:v1.18.6'
+      command:
+        - /bin/bash
+        - '-c'
+        - |
+          function log() {
+            level=$1
+            msg=$2
+            date=$(date '+%F %H:%M:%S')
+            echo "[$date] $level     $msg"
+          }
 
-            ./argocd app sync -l app=service-mesh
-        envFrom:
-          - secretRef:
-              name: decapod-argocd-config
-        resources: {}
-      activeDeadlineSeconds: 900
-      retryStrategy:
-        limit: 2
+          kube_params=""
+          if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
+            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
+            echo -e "kube_secret:\n$kube_secret" | head -n 5
+            cat <<< "$kube_secret" > /etc/kubeconfig
+            kube_params+="--kubeconfig=/etc/kubeconfig"
+          fi
+
+          kubectl $kube_params get ns ${TARGET_NAMESPACE}
+          if [[ $? =~ 1 ]]; then
+            kubectl $kube_params create ns ${TARGET_NAMESPACE}
+            kubectl $kube_params label ns ${TARGET_NAMESPACE} name=lma
+            log "INFO" "${TARGET_NAMESPACE} successfully created."
+          fi
+
+          kubectl $kube_params get secret ${SECRET_NAME}
+          if [[ $? =~ 1 ]]; then
+            kubectl $kube_params get secret ${SECRET_NAME} -n ${SOURCE_NAMESPACE} -o yaml \
+            | grep -v '^\s*namespace:\s' \
+            | kubectl $kube_params apply -n ${TARGET_NAMESPACE} -f -
+            log "INFO" "${SECRET_NAME} successfully created."
+          fi
+      env:
+      - name: SECRET_NAME
+        value: '{{inputs.parameters.secret_name}}'
+      - name: SOURCE_NAMESPACE
+        value: '{{inputs.parameters.source_namespace}}'
+      - name: TARGET_NAMESPACE
+        value: '{{inputs.parameters.target_namespace}}'
+      resources: {}
+    activeDeadlineSeconds: 900
+    retryStrategy:
+      limit: 2
+
+  - name: sync-app
+    container:
+      name: sync-app
+      image: 'docker.io/sktdev/argocd:latest'
+      command:
+        - /bin/bash
+        - '-c'
+        - |
+          ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
+          --password $ARGO_PASSWORD
+
+          app_label=""
+          if [[ -n "{{ workflow.parameters.app_prefix }}" ]]; then
+            app_label+="-l app={{ workflow.parameters.app_prefix }}-service-mesh"
+          else
+            app_label+="-l app=service-mesh"
+          fi
+
+          ./argocd app sync $app_label
+      envFrom:
+        - secretRef:
+            name: decapod-argocd-config
+      resources: {}
+    activeDeadlineSeconds: 900
+    retryStrategy:
+      limit: 2
