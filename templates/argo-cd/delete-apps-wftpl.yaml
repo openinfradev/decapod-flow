@@ -8,6 +8,7 @@ spec:
   arguments:
     parameters:
     # Filter to filter argocd apps (E.g., "app=lma")
+    # This is only for 'DeleteAppsByLabel' template
     - name: filter
       value: ""
   templates:
@@ -114,6 +115,8 @@ spec:
           echo "Waiting 20 secs for the app to be deleted.."
           sleep 20
         done
+
+        echo "App '$APP' have been deleted!"
       envFrom:
         - secretRef:
             name: "decapod-argocd-config"
