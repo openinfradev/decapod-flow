@@ -4,16 +4,18 @@ metadata:
   name: delete-apps
   namespace: argo
 spec:
+  entrypoint: DeleteAppsByLabel
   arguments:
     parameters:
     # Filter to filter argocd apps (E.g., "app=lma")
+    # This is only for 'DeleteAppsByLabel' template
     - name: filter
       value: ""
   templates:
   - name: DeleteAppsByLabel
     activeDeadlineSeconds: 900
     container:
-      name: 'delete-apps'
+      name: 'delete-apps-by-label'
       image: docker.io/sktcloud/argocd-cli:v2.2.5
       imagePullPolicy: IfNotPresent
       command:
@@ -81,3 +83,43 @@ spec:
       env:
         - name: FILTER
           value: "{{workflow.parameters.filter}}"
+
+  - name: DeleteAppsByName
+    activeDeadlineSeconds: 900
+    inputs:
+      parameters:
+      - name: app_name
+    container:
+      name: 'delete-apps-by-name'
+      image: docker.io/sktcloud/argocd-cli:v2.2.5
+      imagePullPolicy: IfNotPresent
+      command:
+      - /bin/bash
+      - -c
+      - |
+        # log into Argo CD server
+        ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
+        --password $ARGO_PASSWORD
+
+        # Pre-check: validate if the app exists
+        if ! (./argocd app list | grep $APP); then
+          echo "No such app: $APP. Skipping app removal.."
+          exit 1
+        fi
+
+        echo "Found app '$APP'. Start deleting it.."
+        ./argocd app delete $APP --cascade -y
+
+        while (./argocd app list | grep $APP )
+        do
+          echo "Waiting 20 secs for the app to be deleted.."
+          sleep 20
+        done
+
+        echo "App '$APP' have been deleted!"
+      envFrom:
+        - secretRef:
+            name: "decapod-argocd-config"
+      env:
+        - name: APP
+          value: "{{inputs.parameters.app_name}}"
