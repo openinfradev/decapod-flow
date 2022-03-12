@@ -23,6 +23,9 @@ spec:
       - name: target_cluster  # set to site_name by default
       - name: namespace
     activeDeadlineSeconds: 900
+    retryStrategy:
+      limit: 3
+      retryPolicy: "Always"
     container:
       name: 'create'
       image: docker.io/sktcloud/argocd-cli:v2.2.5

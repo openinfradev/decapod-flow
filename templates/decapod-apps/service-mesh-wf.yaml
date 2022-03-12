@@ -26,7 +26,18 @@ spec:
   #=========================================================
   - name: deploy-start
     steps:
-    - - name: create-eck-secret
+    - - name: create-namespace-list
+        template: create-namespace-list
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "namespace": "istio-system", "label": "name=lma" },
+                { "namespace": "istio-ingress", "label": "istio-injection=enabled" }
+              ]
+
+    - - name: create-eck-secret-certs
         template: copy-eck-secret
         arguments:
           parameters:
@@ -36,7 +47,7 @@ spec:
             value: lma
           - name: target_namespace
             value: istio-system
-    
+
     - - name: deploy
         template: deploy
     
@@ -49,7 +60,7 @@ spec:
   - name: deploy
     dag:
       tasks:
-      - name: istio-operator
+      - name: istio-base
         templateRef:
           name: create-application
           template: installApps
@@ -58,10 +69,9 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "service-mesh", "path": "istio-operator-crds", "namespace": "istio-operator", "target_cluster": "" },
-                { "app_group": "service-mesh", "path": "istio-operator", "namespace": "istio-operator", "target_cluster": "" }
+                { "app_group": "service-mesh", "path": "istio-base", "namespace": "istio-system", "target_cluster": "" }
               ]
-      - name: istio-controlplane
+      - name: istiod
         templateRef:
           name: create-application
           template: installApps
@@ -70,23 +80,23 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "service-mesh", "path": "servicemesh-controlplane", "namespace": "istio-system", "target_cluster": "" }
-              ]
-        dependencies:
-        - istio-operator
-      - name: istio-gateway
-        templateRef:
-          name: create-application
-          template: installApps
-        arguments:
-          parameters:
-          - name: list
-            value: |
-              [
-                { "app_group": "service-mesh", "path": "servicemesh-gateway", "namespace": "istio-system", "target_cluster": "" }
+                { "app_group": "service-mesh", "path": "istiod", "namespace": "istio-system", "target_cluster": "" }
               ]
         dependencies:
-        - istio-controlplane
+        - istio-base
+      - name: istio-ingress-gateway
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "service-mesh", "path": "istio-ingress-gateway", "namespace": "istio-ingress", "target_cluster": "" }
+              ]
+        dependencies:
+        - istiod
       - name: jaeger-kiali-operator
         templateRef:
           name: create-application
@@ -102,7 +112,7 @@ spec:
                 { "app_group": "service-mesh", "path": "kiali-operator", "namespace": "istio-system", "target_cluster": "" }
               ]
         dependencies:
-        - istio-controlplane
+        - istiod
       - name: servicemesh-jaeger-kiali-resource
         templateRef:
           name: create-application
@@ -131,7 +141,64 @@ spec:
                 { "app_group": "service-mesh", "path": "servicemesh-prometheusrule", "namespace": "istio-system", "target_cluster": "" }
               ]
         dependencies:
-        - jaeger-kiali-operator
+        - servicemesh-jaeger-kiali-resource
+
+  - name: create-namespace
+    inputs:
+      parameters:
+      - name: namespace
+        value: ""
+      - name: label
+        value: ""
+    container:
+      name: create-namespace
+      image: 'k8s.gcr.io/hyperkube:v1.18.6'
+      command:
+        - /bin/bash
+        - '-c'
+        - |
+          function log() {
+            level=$1
+            msg=$2
+            date=$(date '+%F %H:%M:%S')
+            echo "[$date] $level     $msg"
+          }
+
+          kube_params=""
+          if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
+            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
+            echo -e "kube_secret:\n$kube_secret" | head -n 5
+            cat <<< "$kube_secret" > /etc/kubeconfig
+            kube_params+="--kubeconfig=/etc/kubeconfig"
+          fi
+
+          kubectl $kube_params get ns ${NAMESPACE}
+          if [[ $? =~ 1 ]]; then
+            kubectl $kube_params create ns ${NAMESPACE}
+            kubectl $kube_params label ns ${NAMESPACE} ${LABEL}
+            log "INFO" "${NAMESPACE} successfully created."
+          fi
+      env:
+      - name: NAMESPACE
+        value: '{{inputs.parameters.namespace}}'
+      - name: LABEL
+        value: '{{inputs.parameters.label}}'
+    activeDeadlineSeconds: 900
+    retryStrategy:
+      limit: 2
+
+  - name: create-namespace-list
+    inputs:
+      parameters:
+      - name: list
+    steps:
+    - - name: create-namespace
+        template: create-namespace
+        arguments:
+          parameters:
+          - {name: namespace, value: "{{item.namespace}}"}
+          - {name: label, value: "{{item.label}}"}
+        withParam: "{{inputs.parameters.list}}"
 
   - name: copy-eck-secret
     inputs:
@@ -164,20 +231,12 @@ spec:
             kube_params+="--kubeconfig=/etc/kubeconfig"
           fi
 
-          kubectl $kube_params get ns ${TARGET_NAMESPACE}
-          if [[ $? =~ 1 ]]; then
-            kubectl $kube_params create ns ${TARGET_NAMESPACE}
-            kubectl $kube_params label ns ${TARGET_NAMESPACE} name=lma
-            log "INFO" "${TARGET_NAMESPACE} successfully created."
-          fi
-
-          kubectl $kube_params get secret ${SECRET_NAME}
-          if [[ $? =~ 1 ]]; then
-            kubectl $kube_params get secret ${SECRET_NAME} -n ${SOURCE_NAMESPACE} -o yaml \
+          kubectl $kube_params delete secret ${SECRET_NAME} -n ${TARGET_NAMESPACE} || true
+          kubectl $kube_params get secret ${SECRET_NAME} -n ${SOURCE_NAMESPACE} -o yaml \
             | grep -v '^\s*namespace:\s' \
             | kubectl $kube_params apply -n ${TARGET_NAMESPACE} -f -
             log "INFO" "${SECRET_NAME} successfully created."
-          fi
+      
       env:
       - name: SECRET_NAME
         value: '{{inputs.parameters.secret_name}}'
@@ -212,7 +271,6 @@ spec:
       envFrom:
         - secretRef:
             name: decapod-argocd-config
-      resources: {}
     activeDeadlineSeconds: 900
     retryStrategy:
       limit: 2

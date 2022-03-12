@@ -26,11 +26,15 @@ spec:
           template: DeleteAppsByLabel
     
     - - name: delete-namespace
-        template: delete-namespace
+        template: delete-namespace-list
         arguments:
           parameters:
-          - name: namespace
-            value: istio-system
+          - name: list
+            value: |
+              [
+                { "namespace": "istio-ingress" },
+                { "namespace": "istio-system" }
+              ]
   
   #=========================================================
   # Template Definition
@@ -234,8 +238,8 @@ spec:
           fi
 
           kubectl $kube_params delete ns ${NAMESPACE}
-          
           log "INFO" "${NAMESPACE} successfully deleted."
+
       env:
       - name: NAMESPACE
         value: '{{inputs.parameters.namespace}}'
@@ -243,3 +247,14 @@ spec:
     retryStrategy:
       limit: 2
 
+  - name: delete-namespace-list
+    inputs:
+      parameters:
+      - name: list
+    steps:
+    - - name: delete-namespace
+        template: delete-namespace
+        arguments:
+          parameters:
+          - {name: namespace, value: "{{item.namespace}}"}
+        withParam: "{{inputs.parameters.list}}"
