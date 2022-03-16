@@ -147,6 +147,7 @@ spec:
                 { "app_group": "lma", "path": "prometheus-node-exporter", "namespace": "lma", "target_cluster": ""},
                 { "app_group": "lma", "path": "prometheus-adapter", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "addons", "namespace": "lma", "target_cluster": "" }
+                { "app_group": "lma", "path": "metric-server", "namespace": "lma", "target_cluster": "" }
               ]
         dependencies: [prepare-lma]
 
