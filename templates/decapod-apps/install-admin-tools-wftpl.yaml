@@ -1,0 +1,130 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: install-admin-tools
+  namespace: argo
+spec:
+  entrypoint: deploy
+  arguments:
+    parameters:
+      - name: site_name
+        value: hanu-reference
+      - name: manifest_repo_url
+        value: 'https://github.com/openinfradev/decapod-manifests'
+      - name: revision
+        value: main
+      - name: app_prefix
+        value: ""
+      - name: keycloak_namespace
+        value: keycloak
+      - name: keycloak_db_user_password
+        value: keycloak
+  templates:
+    - name: deploy
+      dag:
+        tasks:
+          - name: create-namespace-for-keycloak
+            template: create-namespace
+            arguments:
+              parameters:
+                - name: target_namespace
+                  value: "{{workflow.parameters.keycloak_namespace}}"
+
+          - name: keycloak-db-init
+            template: keycloak-db-init
+            dependencies:
+              - create-namespace-for-keycloak
+
+          - name: keycloak-operator
+            templateRef:
+              name: create-application
+              template: installApps
+            arguments:
+              parameters:
+                - name: list
+                  value: |
+                    [
+                      { "app_group": "admin-tools", "path": "keycloak-operator", "namespace": "{{workflow.parameters.keycloak_namespace}}", "target_cluster": "" }
+                    ]
+            dependencies:
+              - create-namespace-for-keycloak
+
+          - name: keycloak
+            templateRef:
+              name: create-application
+              template: installApps
+            arguments:
+              parameters:
+                - name: list
+                  value: |
+                    [
+                      { "app_group": "admin-tools", "path": "keycloak-resources", "namespace": "{{workflow.parameters.keycloak_namespace}}", "target_cluster": "" }
+                    ]
+            dependencies:
+              - keycloak-operator
+
+    - name: create-namespace
+      arguments: {}
+      inputs:
+        parameters:
+          - name: target_namespace
+      outputs: {}
+      metadata: {}
+      container:
+        name: create-namespace
+        image: 'k8s.gcr.io/hyperkube:v1.18.6'
+        command:
+          - /bin/bash
+          - '-c'
+          - |
+            function log() {
+              level=$1
+              msg=$2
+              date=$(date '+%F %H:%M:%S')
+              echo "[$date] $level     $msg"
+            }
+
+            kubectl get ns ${TARGET_NAMESPACE}
+            if [[ $? =~ 1 ]]; then
+              kubectl create ns ${TARGET_NAMESPACE}
+              kubectl label ns ${TARGET_NAMESPACE} name=${TARGET_NAMESPACE}
+              log "INFO" "${TARGET_NAMESPACE} successfully created."
+            fi
+        env:
+          - name: TARGET_NAMESPACE
+            value: '{{inputs.parameters.target_namespace}}'
+        resources: {}
+      activeDeadlineSeconds: 900
+      retryStrategy:
+        limit: 2
+
+    - name: keycloak-db-init
+      arguments: {}
+      inputs: {}
+      outputs: {}
+      metadata: {}
+      container:
+        name: db-init
+        image: 'docker.io/bitnami/postgresql:11.12.0-debian-10-r44'
+        command:
+          - /bin/bash
+          - '-cx'
+          - |
+            function log() {
+              level=$1
+              msg=$2
+              date=$(date '+%F %H:%M:%S')
+              echo "[$date] $level     $msg"
+            }
+
+            export PGPASSWORD=tacopassword
+
+            /opt/bitnami/postgresql/bin/psql -h postgresql.decapod-db.svc -U postgres -c "CREATE DATABASE keycloak;"
+            /opt/bitnami/postgresql/bin/psql -h postgresql.decapod-db.svc -U postgres -c "CREATE USER keycloak WITH ENCRYPTED PASSWORD '{{workflow.parameters.keycloak_db_user_password}}';"
+            /opt/bitnami/postgresql/bin/psql -h postgresql.decapod-db.svc -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;"
+
+            log "INFO" "database and user for keycloak are successfully created."
+        resources: {}
+      activeDeadlineSeconds: 900
+      retryStrategy:
+        limit: 2

@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: remove-admin-tools
+  namespace: argo
+spec:
+  entrypoint: process
+  arguments:
+    parameters:
+    - name: filter
+      value: "app=admin-tools" 
+  templates:
+    - name: process
+      steps:
+      - - name: remove_admin-tools
+          templateRef:
+            name: delete-apps
+            template: DeleteAppsByLabel
