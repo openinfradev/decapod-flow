@@ -69,7 +69,9 @@ spec:
           - name: list
             value: |
               [
+                { "app_group": "service-mesh", "path": "istio-base-crds", "namespace": "istio-system", "target_cluster": "" },
                 { "app_group": "service-mesh", "path": "istio-base", "namespace": "istio-system", "target_cluster": "" }
+                
               ]
       - name: istiod
         templateRef:
