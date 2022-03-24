@@ -37,8 +37,8 @@ spec:
 
         deleted=False
 
-        # Delete normal apps except operators and CRs
-        app_list=$(./argocd app list -l $FILTER --output name | grep -v operator)
+        # Delete normal apps except operators and CRDs
+        app_list=$(./argocd app list -l $FILTER --output name | grep -v operator | grep -v crds)
         if [[ $? -eq 0 && -n $app_list ]]; then
           echo -e "[1st phase] Deleting apps:\n$app_list"
           echo "$app_list" | xargs ./argocd app delete --cascade -y
@@ -55,7 +55,7 @@ spec:
           echo "No apps found except operators. Skipping 1st phase.."
         fi
 
-        # Delete operators and CRs
+        # Delete operators and CRDs
         app_list=$(./argocd app list -l $FILTER --output name)
         if [[ $? -eq 0 && -n $app_list ]]; then
           echo -e "[2nd phase] Deleting operators:\n$app_list"
@@ -70,7 +70,7 @@ spec:
           echo "[2nd phase] App deletion have been finished!"
           deleted=True
         else
-          echo "No operators found. Skipping 2nd phase.."
+          echo "No operators or CRDs found. Skipping 2nd phase.."
         fi
 
         if [ $deleted != True ] ; then
