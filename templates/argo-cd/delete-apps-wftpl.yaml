@@ -102,7 +102,7 @@ spec:
         --password $ARGO_PASSWORD
 
         # Pre-check: validate if the app exists
-        if ! (./argocd app list | grep $APP); then
+        if ! (./argocd app list --output name | grep -E "^$APP$"); then
           echo "No such app: $APP. Skipping app removal.."
           exit 1
         fi
@@ -110,7 +110,7 @@ spec:
         echo "Found app '$APP'. Start deleting it.."
         ./argocd app delete $APP --cascade -y
 
-        while (./argocd app list | grep $APP )
+        while (./argocd app list --output name | grep -E "^$APP$" )
         do
           echo "Waiting 20 secs for the app to be deleted.."
           sleep 20
