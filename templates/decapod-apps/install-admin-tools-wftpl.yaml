@@ -44,12 +44,13 @@ spec:
                 - name: list
                   value: |
                     [
-                      { "app_group": "admin-tools", "path": "keycloak-operator", "namespace": "{{workflow.parameters.keycloak_namespace}}", "target_cluster": "" }
+                      { "app_group": "admin-tools", "path": "keycloak-operator-crds", "namespace": "{{workflow.parameters.keycloak_namespace}}", "target_cluster": "in-cluster" },
+                      { "app_group": "admin-tools", "path": "keycloak-operator", "namespace": "{{workflow.parameters.keycloak_namespace}}", "target_cluster": "in-cluster" }
                     ]
             dependencies:
               - create-namespace-for-keycloak
 
-          - name: keycloak
+          - name: keycloak-resources
             templateRef:
               name: create-application
               template: installApps
@@ -58,7 +59,7 @@ spec:
                 - name: list
                   value: |
                     [
-                      { "app_group": "admin-tools", "path": "keycloak-resources", "namespace": "{{workflow.parameters.keycloak_namespace}}", "target_cluster": "" }
+                      { "app_group": "admin-tools", "path": "keycloak-resources", "namespace": "{{workflow.parameters.keycloak_namespace}}", "target_cluster": "in-cluster" }
                     ]
             dependencies:
               - keycloak-operator
