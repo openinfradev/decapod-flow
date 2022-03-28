@@ -43,7 +43,7 @@ spec:
           echo -e "[1st phase] Deleting apps:\n$app_list"
           echo "$app_list" | xargs ./argocd app delete --cascade -y
 
-          until [ $(./argocd app list -l $FILTER --output name | grep -v operator | wc -l) == 0 ]
+          until [ $(./argocd app list -l $FILTER --output name | grep -v operator | grep -v crds | wc -l) == 0 ]
           do
             echo "Waiting 20 secs for apps to be deleted.."
             sleep 20
