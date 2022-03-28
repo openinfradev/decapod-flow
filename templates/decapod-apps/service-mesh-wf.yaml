@@ -262,6 +262,12 @@ spec:
             kube_params+="--kubeconfig=/etc/kubeconfig"
           fi
 
+          until [ $(kubectl $kube_params get secret ${SECRET_NAME} -n ${SOURCE_NAMESPACE} --output name | wc -l) == 1 ]
+          do
+            echo "Waiting 10 secs for eck to be installed.."
+            sleep 10
+          done
+
           kubectl $kube_params delete secret ${SECRET_NAME} -n ${TARGET_NAMESPACE} || true
           kubectl $kube_params get secret ${SECRET_NAME} -n ${SOURCE_NAMESPACE} -o yaml \
             | grep -v '^\s*namespace:\s' \
