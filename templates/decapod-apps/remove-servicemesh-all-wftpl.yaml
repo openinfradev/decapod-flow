@@ -24,7 +24,7 @@ spec:
         templateRef:
           name: delete-apps
           template: DeleteAppsByLabel
-    
+
     - - name: delete-namespace
         template: delete-namespace-list
         arguments:
