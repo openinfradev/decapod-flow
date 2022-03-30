@@ -50,18 +50,22 @@ spec:
         config = {}
         commit_msg = ''
         numChanged = 0
-        sitePath = './decapod-site'
+        siteDir = 'cluster-site'
+        sitePath = "./{}".format(siteDir)
         siteFileName = "{}/{}/site-values.yaml".format(clusterName,appGroup)
         siteFileNameFull = "{}/{}".format(sitePath, siteFileName)
 
-        # Clone or re-use decapod-site repository #
+        # Clone or re-use site repository #
         if not os.path.isdir(sitePath):
             print("Cloning repository...")
 
-            repo = git.Repo.clone_from("{{inputs.parameters.site_repo_url}}", 'decapod-site')
+            repo = git.Repo.clone_from("{{inputs.parameters.site_repo_url}}", siteDir)
             with repo.config_writer() as git_config:
                 git_config.set_value('user', 'email', 'tks-argo@tks.com')
                 git_config.set_value('user', 'name', 'TKS Argo')
+            print("Cloned repo contents:")
+            os.system("ls -al {}".format(sitePath))
+            os.system("ls -al {}/{}".format(sitePath, clusterName))
         else:
             print("The repo already exists. Pulling latest updates..")
 
