@@ -12,8 +12,6 @@ spec:
     # valid value: 'efk' or 'loki'
     - name: logging_component
       value: "efk"
-    - name: site_repo_url
-      value: "https://github.com/openinfradev/decapod-site"
     - name: manifest_repo_url
       value: "https://github.com/openinfradev/decapod-manifests"
     - name: revision

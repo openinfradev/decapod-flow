@@ -11,6 +11,7 @@ spec:
         name: default
     inputs:
       parameters:
+      # Repo URL that doesn't include 'http://'. (e.g., "github.com/ORG_NAME/REPO_NAME")
       - name: site_repo_url
         value: ""
       - name: action
@@ -29,7 +30,9 @@ spec:
     script:
       image: sktdev/python-centos-wf-worker:v1.0
       command: ["python"]
-      env:
+      envFrom:
+        - secretRef:
+            name: "github-tks-mgmt-token"
       source: |
         import sys
         import argparse
@@ -59,7 +62,8 @@ spec:
         if not os.path.isdir(sitePath):
             print("Cloning repository...")
 
-            repo = git.Repo.clone_from("{{inputs.parameters.site_repo_url}}", siteDir)
+            repoUrl = "https://" + os.environ['TOKEN'] + "@{{inputs.parameters.site_repo_url}}"
+            repo = git.Repo.clone_from(repoUrl, siteDir)
             with repo.config_writer() as git_config:
                 git_config.set_value('user', 'email', 'tks-argo@tks.com')
                 git_config.set_value('user', 'name', 'TKS Argo')
