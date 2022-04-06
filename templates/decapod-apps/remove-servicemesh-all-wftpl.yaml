@@ -98,6 +98,7 @@ spec:
           fi
 
           kubectl $kube_params delete fluentbit --all -n {{inputs.parameters.namespace}} || true
+          kubectl $kube_params delete fluentbitconfig --all -n {{inputs.parameters.namespace}} || true
 
   - name: delete-argocd-app
     inputs:
