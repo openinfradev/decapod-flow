@@ -20,7 +20,19 @@ spec:
   #=========================================================
   - name: remove-start
     steps:
-    - - name: remove-service-mesh-app
+    - - name: disableAutoSync
+        template: disableAutoSync
+
+    # Delete CRs first so that it doesn't hang
+    # due to earlier service-account deletion. 
+    - - name: removeFluentbitCR
+        template: removeFluentbitCR
+        arguments:
+          parameters:
+          - name: namespace
+            value:  "lma"
+
+    - - name: remove-service-mesh-argocd-apps
         templateRef:
           name: delete-apps
           template: DeleteAppsByLabel
@@ -39,6 +51,54 @@ spec:
   #=========================================================
   # Template Definition
   #=========================================================
+  - name: disableAutoSync
+    container:
+      name: disable-auto-sync
+      image: docker.io/sktcloud/argocd-cli:v2.2.5
+      command:
+        - /bin/bash
+        - '-c'
+        - |
+          # Login to Argo CD server
+          ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
+          --password $ARGO_PASSWORD
+
+          app_list=$(./argocd app list -l {{workflow.parameters.filter}} --output name)
+          echo -e "app list:\n $app_list"
+          if [[ $? -eq 0 && -n $app_list ]]; then
+            # Disable auto-sync
+            echo "Disabling auto-sync of service-mesh app_group.."
+            echo "$app_list" | xargs -I '{}' ./argocd app set '{}' --sync-policy none
+          fi
+      envFrom:
+        - secretRef:
+            name: "decapod-argocd-config"
+
+  - name: removeFluentbitCR
+    inputs:
+      parameters:
+        - name: namespace
+    container:
+      name: remove-fluentbit-cr
+      image: k8s.gcr.io/hyperkube:v1.18.6
+      command:
+        - /bin/bash
+        - '-c'
+        - |
+          echo "Deleting fluentbit CR..."
+
+          kube_params=""
+
+          if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
+            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
+            echo -e "kube_secret:\n$kube_secret" | head -n 5
+            cat <<< "$kube_secret" > /etc/kubeconfig
+
+            kube_params+="--kubeconfig=/etc/kubeconfig"
+          fi
+
+          kubectl $kube_params delete fluentbit --all -n {{inputs.parameters.namespace}} || true
+
   - name: delete-argocd-app
     inputs:
       parameters:

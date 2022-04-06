@@ -19,13 +19,21 @@ spec:
   templates:
   - name: process
     steps:
-    - - name: disableAutoSyncOfPrometheus
+    - - name: disableAutoSync
         template: disableAutoSync
 
-    # Delete prometheus CR first so that it doesn't hang
+    # Delete CRs first so that it doesn't hang
     # due to earlier service-account deletion #
     - - name: removePrometheusCR
         template: removePrometheusCR
+        arguments:
+          parameters:
+          - name: namespace
+            value:  "lma"
+
+    # This is for EFK option
+    - - name: removeFluentbitCR
+        template: removeFluentbitCR
         arguments:
           parameters:
           - name: namespace
@@ -57,20 +65,17 @@ spec:
         - /bin/bash
         - '-c'
         - |
-          PROM_APP_NAME="prometheus"
-          if [[ -n "{{workflow.parameters.app_prefix}}" ]]; then
-            PROM_APP_NAME="{{workflow.parameters.app_prefix}}-prometheus"
-          fi
-          echo "[temp] ARGO_SERVER: $ARGO_SERVER"
-
           # Login to Argo CD server
           ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
           --password $ARGO_PASSWORD
 
-          echo "Disabling auto-sync of [$PROM_APP_NAME]' app.."
-
-          # Disable auto-sync
-          ./argocd app set $PROM_APP_NAME --sync-policy none
+          app_list=$(./argocd app list -l {{workflow.parameters.filter}} --output name)
+          echo -e "app list:\n $app_list"
+          if [[ $? -eq 0 && -n $app_list ]]; then
+            # Disable auto-sync
+            echo "Disabling auto-sync of LMA app_group.."
+            echo "$app_list" | xargs -I '{}' ./argocd app set '{}' --sync-policy none
+          fi
       envFrom:
         - secretRef:
             name: "decapod-argocd-config"
@@ -101,6 +106,30 @@ spec:
           kubectl $kube_params delete prometheus --all -n {{inputs.parameters.namespace}}
           kubectl $kube_params delete alertmanager --all -n {{inputs.parameters.namespace}}
 
+  - name: removeFluentbitCR
+    inputs:
+      parameters:
+        - name: namespace
+    container:
+      name: remove-fluentbit-cr
+      image: k8s.gcr.io/hyperkube:v1.18.6
+      command:
+        - /bin/bash
+        - '-c'
+        - |
+          echo "Deleting fluentbit CR..."
+
+          kube_params=""
+
+          if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
+            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
+            echo -e "kube_secret:\n$kube_secret" | head -n 5
+            cat <<< "$kube_secret" > /etc/kubeconfig
+
+            kube_params+="--kubeconfig=/etc/kubeconfig"
+          fi
+
+          kubectl $kube_params delete fluentbit --all -n {{inputs.parameters.namespace}} || true
 
   - name: removeLeftoverResources
     inputs:
