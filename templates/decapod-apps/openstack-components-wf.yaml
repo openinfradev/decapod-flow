@@ -8,7 +8,7 @@ spec:
   arguments:
     parameters:
     - name: site_name
-      value: "hanu-reference"
+      value: "decapod-reference"
     - name: app_group
       value: "openstack"
     - name: manifest_repo_url
