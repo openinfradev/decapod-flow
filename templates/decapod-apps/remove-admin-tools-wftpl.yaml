@@ -12,7 +12,7 @@ spec:
   templates:
     - name: process
       steps:
-      - - name: remove_admin-tools
+      - - name: remove-admin-tools
           templateRef:
             name: delete-apps
             template: DeleteAppsByLabel
