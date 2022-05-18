@@ -16,7 +16,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  build:
+  lint:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
@@ -35,7 +35,7 @@ jobs:
       - name: Install Argo CLI
         run: |
           # Download the binary
-          curl -sLO https://github.com/argoproj/argo-workflows/releases/download/v3.1.9/argo-linux-amd64.gz
+          curl -sLO https://github.com/argoproj/argo-workflows/releases/download/v3.2.6/argo-linux-amd64.gz
 
           # Unzip
           gunzip argo-linux-amd64.gz
@@ -49,33 +49,33 @@ jobs:
           # Test installation
           argo version
 
-      # Make fake kubeconfig for executing argo cli
-      - name: Make fake kubeconfig
+      # Make kubeconfig for executing argo cli
+      - name: Make  kubeconfig
         run: |
-          cat <<EOF > /tmp/fakekubeconfig
+          cat <<EOF > /tmp/kubeconfig
           apiVersion: v1
-          kind: Config
           clusters:
           - cluster:
-              certificate-authority-data: ZHVtbXkK
-              server: https://localhost:6443
-            name: dummy
+              certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM2akNDQWRLZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREFWTVJNd0VRWURWUVFERXdwcmRXSmwKY201bGRHVnpNQjRYRFRJeU1EVXhNakExTlRjeU5Wb1hEVE15TURVd09UQTJNREl5TlZvd0ZURVRNQkVHQTFVRQpBeE1LYTNWaVpYSnVaWFJsY3pDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBSzJSCmd5NWFDdytWYXJXb0w2dk9mZTdGTnFPbTRYbC9qY2NmVGRoYnJHaDVXalZCY1psQkFOQm5wTS94S3A4V2tLemsKeXk5dWVKMGF1YVJLdUp5VC8wbE1RemZaWUx3ODBTSmxlcHh1SE5NTW1hRzFkRXZlT1dKbFAxRW9KVTNjNDlaUQpGaVV3eHM0NW9kOXVoQVNCRW9EeU5TTjVtQnBSNnliUnZpL2tvSDRBbTBQVWt0YUVtak1Kc096MnMwNkszS1BYCmc4Mk5FajVSVG1FYXhFRW93S0tUTngvWVhDc3hKZWNPQWc2TWhua0pWaHVSUmFmZ0JVSzZmWVB0WGpWK0RteHYKU2J3RGYyMFdoQU1xc0FjbmlTdnIwZm43NDNBUlpjRlJZT1NrbU1rWDVMcUVCUnlCUWhMMllqL1k1QVU4eXNZVQoxMGc4UFpLeEdmTDJDeUJLN3lzQ0F3RUFBYU5GTUVNd0RnWURWUjBQQVFIL0JBUURBZ0trTUJJR0ExVWRFd0VCCi93UUlNQVlCQWY4Q0FRQXdIUVlEVlIwT0JCWUVGSXhRZjJJL294NDNseGxIbTVEWGZTQ0JKby9TTUEwR0NTcUcKU0liM0RRRUJDd1VBQTRJQkFRQ2U1dDNscnE0SWVvMStpa1dldWRFaDZCazdOSEVDYjdOK1BRZEF4c3pMTlRIUQpiZGt0d010alFiUjRTNk5iVUp5QnlSNllkYlBxUHdjaTJzdVdEQzNTaW5GdTNiRVFueG9tcEhRNHdRM09JSmZ2ClRGanNZbWJ2S3Uvb0czV2RQeVVjbUZ3RVhHTDNmWGhYRytMVXU5d3hiL3NLcnZ5cUlQRzBqakhSV1NlTVMxckIKcjB6aXdmSUw0VWZlbTZ5aHpJeDdkem1pMzNabCtHaEFXclVZRVpsaWplUjF0Z2N6bFZjS0MreWYrODdXbWhLUgpJRFhpak4wdUUzT2pNQW1sVVN6aDlDQ1NZT0EzUVB2azBzcFZ6TnBnR01yOHMwNVlUcllreW9aN0NyRWVPTE0vCkxDSVVqVDVlY2xVMzZRWUF4dnljWUwvS21zV1E2NnRldDYxS3FnYmQKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+              server: https://tks-cicd-admin-apiserver-1710875704.ap-northeast-2.elb.amazonaws.com:6443
+            name: tks-cicd
           contexts:
           - context:
-              cluster: dummy
-              user: dummy
-            name: dummy
-          current-context: dummy
+              cluster: tks-cicd
+              user: argo
+            name: argo@tks-cicd
+          current-context: argo@tks-cicd
+          kind: Config
           preferences: {}
           users:
-          - name: dummy
+          - name: argo
             user:
-              username: dummy
-              password: dummy
+              username: test
+              password: test
           EOF
-          cat /tmp/fakekubeconfig
+          cat /tmp/kubeconfig
           
       # Runs a Lint command
       - name: Lint changed file
         run: |
-          argo template lint --kubeconfig /tmp/fakekubeconfig ${{ steps.changed-files.outputs.all_changed_files }}
+          argo template lint --kubeconfig /tmp/kubeconfig ${{ steps.changed-files.outputs.all_changed_files }}
