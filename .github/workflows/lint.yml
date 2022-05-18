@@ -16,7 +16,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  build:
+  lint:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
@@ -35,7 +35,7 @@ jobs:
       - name: Install Argo CLI
         run: |
           # Download the binary
-          curl -sLO https://github.com/argoproj/argo-workflows/releases/download/v3.1.9/argo-linux-amd64.gz
+          curl -sLO https://github.com/argoproj/argo-workflows/releases/download/v3.2.6/argo-linux-amd64.gz
 
           # Unzip
           gunzip argo-linux-amd64.gz
@@ -49,33 +49,36 @@ jobs:
           # Test installation
           argo version
 
-      # Make fake kubeconfig for executing argo cli
-      - name: Make fake kubeconfig
+      # Make kubeconfig for executing argo cli
+      - name: Make  kubeconfig
+        env:
+          CLUSTER_CA: ${{ secrets.TEST_CLUSTER_CA }}
+          CLUSTER_URL: ${{ secrets.TEST_CLUSTER_URL }}
         run: |
-          cat <<EOF > /tmp/fakekubeconfig
+          cat <<EOF > /tmp/kubeconfig
           apiVersion: v1
-          kind: Config
           clusters:
           - cluster:
-              certificate-authority-data: ZHVtbXkK
-              server: https://localhost:6443
-            name: dummy
+              certificate-authority-data: $CLUSTER_CA
+              server: $CLUSTER_URL
+            name: tks-cicd
           contexts:
           - context:
-              cluster: dummy
-              user: dummy
-            name: dummy
-          current-context: dummy
+              cluster: tks-cicd
+              user: argo
+            name: argo@tks-cicd
+          current-context: argo@tks-cicd
+          kind: Config
           preferences: {}
           users:
-          - name: dummy
+          - name: argo
             user:
-              username: dummy
-              password: dummy
+              username: test
+              password: test
           EOF
-          cat /tmp/fakekubeconfig
+          cat /tmp/kubeconfig
           
       # Runs a Lint command
       - name: Lint changed file
         run: |
-          argo template lint --kubeconfig /tmp/fakekubeconfig ${{ steps.changed-files.outputs.all_changed_files }}
+          argo template lint --kubeconfig /tmp/kubeconfig ${{ steps.changed-files.outputs.all_changed_files }}
