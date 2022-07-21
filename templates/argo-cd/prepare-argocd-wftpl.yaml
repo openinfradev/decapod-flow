@@ -77,19 +77,9 @@ spec:
             ./argocd proj create sealed-secrets --dest "*,*" --src "*" --allow-cluster-resource "*/*"
           fi
 
-          ./argocd proj get tks-cluster-common
+          ./argocd proj get tks-cluster
           if [[ $? != 0 ]]; then
-            ./argocd proj create tks-cluster-common --dest "*,*" --src "*" --allow-cluster-resource "*/*"
-          fi
-
-          ./argocd proj get tks-cluster-aws
-          if [[ $? != 0 ]]; then
-            ./argocd proj create tks-cluster-aws --dest "*,*" --src "*" --allow-cluster-resource "*/*"
-          fi
-
-          ./argocd proj get tks-cluster-byoh
-          if [[ $? != 0 ]]; then
-            ./argocd proj create tks-cluster-byoh --dest "*,*" --src "*" --allow-cluster-resource "*/*"
+            ./argocd proj create tks-cluster --dest "*,*" --src "*" --allow-cluster-resource "*/*"
           fi
 
           ./argocd proj get admin-tools
