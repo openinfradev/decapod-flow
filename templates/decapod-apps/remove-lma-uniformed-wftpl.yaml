@@ -97,7 +97,6 @@ spec:
           kube_params=""
 
           if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
-            CLUSTER_ID=$(echo "${CLUSTER_ID:0:8}")
             kube_secret=$(kubectl get secret -n ${CLUSTER_ID} ${CLUSTER_ID}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
             echo -e "kube_secret:\n$kube_secret" | head -n 5
             cat <<< "$kube_secret" > /etc/kubeconfig
@@ -125,7 +124,6 @@ spec:
           kube_params=""
 
           if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
-            CLUSTER_ID=$(echo "${CLUSTER_ID:0:8}")
             kube_secret=$(kubectl get secret -n ${CLUSTER_ID} ${CLUSTER_ID}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
             echo -e "kube_secret:\n$kube_secret" | head -n 5
             cat <<< "$kube_secret" > /etc/kubeconfig
@@ -152,7 +150,6 @@ spec:
           CLUSTER_ID={{workflow.parameters.cluster_id}}
           kube_params=""
           if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
-            CLUSTER_ID=$(echo "${CLUSTER_ID:0:8}")
             kube_secret=$(kubectl get secret -n ${CLUSTER_ID} ${CLUSTER_ID}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
             cat <<< "$kube_secret" > /etc/kubeconfig
 
