@@ -77,8 +77,8 @@ spec:
             value: |
               [
                 { "app_group": "lma", "path": "eck-operator", "namespace": "elastic-system", "target_cluster": "" },
-                { "app_group": "lma", "path": "fluentbit-operator-crds", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "fluentbit-operator", "namespace": "lma", "target_cluster": "" }
+                { "app_group": "lma", "path": "fluent-operator-crds", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "fluent-operator", "namespace": "lma", "target_cluster": "" }
               ]
         when: "{{workflow.parameters.logging_component}} == 'efk'"
         dependencies: []
