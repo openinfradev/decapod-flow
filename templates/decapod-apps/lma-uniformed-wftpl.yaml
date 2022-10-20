@@ -63,7 +63,9 @@ spec:
             value: |
               [
                 { "app_group": "lma", "path": "prometheus-operator-crds", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "prometheus-operator", "namespace": "lma", "target_cluster": "" }
+                { "app_group": "lma", "path": "prometheus-operator", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "fluent-operator-crds", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "fluent-operator", "namespace": "lma", "target_cluster": "" }
               ]
         dependencies: []
 
@@ -76,9 +78,7 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "lma", "path": "eck-operator", "namespace": "elastic-system", "target_cluster": "" },
-                { "app_group": "lma", "path": "fluent-operator-crds", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "fluent-operator", "namespace": "lma", "target_cluster": "" }
+                { "app_group": "lma", "path": "eck-operator", "namespace": "elastic-system", "target_cluster": "" }
               ]
         when: "{{workflow.parameters.logging_component}} == 'efk'"
         dependencies: []
@@ -109,7 +109,7 @@ spec:
             value: |
               [
                 { "app_group": "lma", "path": "loki", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "promtail", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "fluentbit", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "eventrouter", "namespace": "lma", "target_cluster": "" }
               ]
         when: "{{workflow.parameters.logging_component}} == 'loki'"
