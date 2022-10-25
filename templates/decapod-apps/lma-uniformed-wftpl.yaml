@@ -108,9 +108,10 @@ spec:
           - name: list
             value: |
               [
+                { "app_group": "lma", "path": "minio", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "loki", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "fluentbit", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "eventrouter", "namespace": "lma", "target_cluster": "" }
+                { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma", "target_cluster": "" }
               ]
         when: "{{workflow.parameters.logging_component}} == 'loki'"
         dependencies: []
