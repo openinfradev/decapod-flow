@@ -130,11 +130,13 @@ spec:
 
             kube_params+="--kubeconfig=/etc/kubeconfig"
           fi
+          
+          for fbcr in ClusterInput ClusterOutput ClusterFilter ClusterParser ClusterFluentBitConfig FluentBit
+          do
+            kubectl $kube_params delete $fbcr --all -n {{inputs.parameters.namespace}} || true
+          done
 
-          kubectl $kube_params delete fluentbit --all -n {{inputs.parameters.namespace}} || true
-          kubectl $kube_params delete fluentbitconfig --all -n {{inputs.parameters.namespace}} || true
-
-  - name: removeLeftoverResources
+- name: removeLeftoverResources
     inputs:
       parameters:
         - name: namespace
