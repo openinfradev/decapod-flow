@@ -141,9 +141,7 @@ spec:
         - istiod
 
       - name: copy-eck-secret
-        templateRef:
-          name: copy-eck-secret
-          template: copy-eck-secret
+        template: copy-eck-secret
         arguments:
           parameters:
           - name: secret_name
