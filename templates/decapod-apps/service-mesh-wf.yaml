@@ -145,7 +145,7 @@ spec:
         arguments:
           parameters:
           - name: secret_name
-            value: "eck-elasticsearch-es-http-certs-public"
+            value: "eck-elasticsearch-es-elastic-user"
           - name: source_namespace
             value: "lma"
           - name: target_namespace
