@@ -133,10 +133,10 @@ spec:
           
           for fbcr in ClusterInput ClusterOutput ClusterFilter ClusterParser ClusterFluentBitConfig FluentBit
           do
-            kubectl $kube_params delete $fbcr --all -n {{inputs.parameters.namespace}} || true
+            kubectl $kube_params delete ${fbcr} --all -n {{inputs.parameters.namespace}} || true
           done
 
-- name: removeLeftoverResources
+  - name: removeLeftoverResources
     inputs:
       parameters:
         - name: namespace
