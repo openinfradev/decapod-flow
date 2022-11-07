@@ -193,7 +193,7 @@ spec:
         value: ""
     container:
       name: create-namespace
-      image: 'k8s.gcr.io/hyperkube:v1.18.6'
+      image: k8s.gcr.io/hyperkube:v1.18.6
       command:
         - /bin/bash
         - '-c'
@@ -253,7 +253,7 @@ spec:
         value: "istio-system"
     container:
       name: copy-eck-secret
-      image: 'k8s.gcr.io/hyperkube:v1.18.6'
+      image: k8s.gcr.io/hyperkube:v1.18.6
       command:
         - /bin/bash
         - '-c'
@@ -301,7 +301,7 @@ spec:
   - name: sync-app
     container:
       name: sync-app
-      image: 'docker.io/sktdev/argocd:latest'
+      image: docker.io/sktdev/argocd:latest
       command:
         - /bin/bash
         - '-c'
