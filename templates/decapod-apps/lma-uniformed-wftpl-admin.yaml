@@ -1,0 +1,174 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: lma-federation
+  namespace: argo
+spec:
+  entrypoint: prepare
+  arguments:
+    parameters:
+    - name: site_name
+      value: "decapod-reference"
+    # valid value: 'efk' or 'loki'
+    - name: logging_component
+      value: "efk"
+    - name: manifest_repo_url
+      value: "https://github.com/openinfradev/decapod-manifests"
+    - name: revision
+      value: main
+    - name: app_prefix
+      value: ""
+  templates:
+  - name: prepare
+    steps:
+      - - name: configuration
+          template: configuration
+          arguments: {}
+      - - name: deploy
+          template: deploy
+          arguments: {}
+
+  #######################
+  # Template Definition #
+  #######################
+
+  - name: configuration
+    container:
+      name: config
+      image: k8s.gcr.io/hyperkube:v1.18.8
+      command:
+        - /bin/bash
+        - '-c'
+        - |
+          kubectl get ns lma
+          if [[ $? != 0 ]]; then
+            kubectl create ns lma
+            kubectl label ns lma name=lma
+            kubectl label ns lma taco-tls=enabled
+          fi
+      resources: {}
+      imagePullPolicy: IfNotPresent
+    activeDeadlineSeconds: 120
+
+  - name: deploy
+    dag:
+      tasks:
+      - name: prometheus-operator
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "lma", "path": "prometheus-operator-crds", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "prometheus-operator", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "fluent-operator-crds", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "fluent-operator", "namespace": "lma", "target_cluster": "" }
+              ]
+        dependencies: []
+
+      - name: eck-operator
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "lma", "path": "eck-operator", "namespace": "elastic-system", "target_cluster": "" }
+              ]
+        when: "{{workflow.parameters.logging_component}} == 'efk'"
+        dependencies: []
+
+      - name: logging-efk
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "lma", "path": "eck-resource", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "fluentbit", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma", "target_cluster": "" }
+              ]
+        when: "{{workflow.parameters.logging_component}} == 'efk'"
+        dependencies: [eck-operator]
+
+      - name: logging-loki
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "lma", "path": "loki", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "fluentbit", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma", "target_cluster": "" }
+              ]
+        when: "{{workflow.parameters.logging_component}} == 'loki'"
+        dependencies: []
+
+      - name: prepare-lma
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "lma", "path": "thanos-config", "namespace": "lma", "target_cluster": "" }
+              ]
+        dependencies: [prometheus-operator]
+
+      - name: prometheus
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "lma", "path": "prometheus", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "kube-state-metrics", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "prometheus-process-exporter", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "prometheus-pushgateway", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "prometheus-node-exporter", "namespace": "lma", "target_cluster": ""},
+                { "app_group": "lma", "path": "prometheus-adapter", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "addons", "namespace": "lma", "target_cluster": "" }
+              ]
+        dependencies: [prepare-lma]
+
+      - name: federation
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "lma", "path": "thanos", "namespace": "lma", "target_cluster": "" }
+              ]
+        dependencies: [prometheus,"logging-{{workflow.parameters.logging_component}}"]
+
+      - name: grafana
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "lma", "path": "grafana", "namespace": "lma", "target_cluster": "" }
+              ]
+        dependencies: [federation]
