@@ -45,7 +45,9 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "lma", "path": "eck-operator", "namespace": "elastic-system", "target_cluster": "" }
+                { "app_group": "lma", "path": "eck-operator", "namespace": "elastic-system", "target_cluster": "" },
+                { "app_group": "lma", "path": "fluent-operator-crds", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "fluent-operator", "namespace": "lma", "target_cluster": "" }
               ]
 
     - - name: logging-efk
@@ -58,6 +60,7 @@ spec:
             value: |
               [
                 { "app_group": "lma", "path": "eck-resource", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "fluentbit", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma", "target_cluster": "" }
               ]
 
@@ -119,7 +122,8 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "service-mesh", "path": "istio-ingress-gateway", "namespace": "istio-ingress", "target_cluster": "" }
+                { "app_group": "service-mesh", "path": "istio-ingress-gateway", "namespace": "istio-ingress", "target_cluster": "" },
+                { "app_group": "service-mesh", "path": "istio-egress-gateway", "namespace": "istio-ingress", "target_cluster": "" }
               ]
         dependencies:
         - istiod
@@ -139,20 +143,6 @@ spec:
               ]
         dependencies:
         - istiod
-
-      - name: copy-eck-secret
-        template: copy-eck-secret
-        arguments:
-          parameters:
-          - name: secret_name
-            value: "eck-elasticsearch-es-elastic-user"
-          - name: source_namespace
-            value: "lma"
-          - name: target_namespace
-            value: "istio-system"
-        dependencies:
-        - jaeger-kiali-operator
-
       - name: servicemesh-jaeger-kiali-resource
         templateRef:
           name: create-application
@@ -166,8 +156,7 @@ spec:
                   { "app_group": "service-mesh", "path": "servicemesh-kiali-resource", "namespace": "istio-system", "target_cluster": "" }
                 ]
         dependencies:
-        - copy-eck-secret
-
+        - jaeger-kiali-operator
       - name: grafana-prometheus-resource
         templateRef:
           name: create-application
