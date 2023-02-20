@@ -151,7 +151,7 @@ spec:
           - name: target_namespace
             value: "istio-system"
         dependencies:
-        - jaeger-kiali-operator
+        - jaeger-kiali-operator 
 
       - name: servicemesh-jaeger-kiali-resource
         templateRef:

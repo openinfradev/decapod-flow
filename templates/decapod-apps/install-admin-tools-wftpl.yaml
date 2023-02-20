@@ -121,7 +121,7 @@ spec:
             export PGPASSWORD=tacopassword
 
             /opt/bitnami/postgresql/bin/psql -h postgresql.decapod-db.svc -U postgres -c "CREATE DATABASE keycloak;"
-            /opt/bitnami/postgresql/bin/psql -h postgresql.decapod-db.svc -U postgres -c "CREATE USER keycloak WITH ENCRYPTED PASSWORD '{{workflow.parameters.keycloak_db_user_password}}';"
+            /opt/bitnami/postgresql/bin/psql -h postgresql.decapod-db.svc -U postgres -c "CREATE USER keycloak SUPERUSER PASSWORD '{{workflow.parameters.keycloak_db_user_password}}';"
             /opt/bitnami/postgresql/bin/psql -h postgresql.decapod-db.svc -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;"
 
             log "INFO" "database and user for keycloak are successfully created."
