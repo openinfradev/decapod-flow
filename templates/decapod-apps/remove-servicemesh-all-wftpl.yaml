@@ -54,7 +54,7 @@ spec:
   - name: disableAutoSync
     container:
       name: disable-auto-sync
-      image: docker.io/sktcloud/argocd-cli:v2.2.5
+      image: harbor-cicd.taco-cat.xyz/tks/argocd-cli:v2.2.5
       command:
         - /bin/bash
         - '-c'
@@ -80,7 +80,7 @@ spec:
         - name: namespace
     container:
       name: remove-fluentbit-cr
-      image: k8s.gcr.io/hyperkube:v1.18.6
+      image: harbor-cicd.taco-cat.xyz/tks/hyperkube:v1.18.6
       command:
         - /bin/bash
         - '-c'
@@ -106,7 +106,7 @@ spec:
       - name: app_group
     container:
       name: delete-argocd-app
-      image: docker.io/sktdev/argocd:latest
+      image: harbor-cicd.taco-cat.xyz/tks/argocd:latest
       command:
         - /bin/bash
         - '-c'
@@ -144,7 +144,7 @@ spec:
       - name: namespace
     container:
       name: delete-finalizer-app
-      image: gcr.io/google-containers/hyperkube:v1.18.6
+      image: harbor-cicd.taco-cat.xyz/tks/hyperkube:v1.18.6
       command:
         - /bin/bash
         - '-c'
@@ -189,7 +189,7 @@ spec:
       - name: component_type
     container:
       name: delete-kubernetes-resources
-      image: gcr.io/google-containers/hyperkube:v1.18.6
+      image: harbor-cicd.taco-cat.xyz/tks/hyperkube:v1.18.6
       command:
         - /bin/bash
         - '-c'
@@ -278,7 +278,7 @@ spec:
       - name: namespace
     container:
       name: delete-namespace
-      image: gcr.io/google-containers/hyperkube:v1.18.6
+      image: harbor-cicd.taco-cat.xyz/tks/hyperkube:v1.18.6
       command:
         - /bin/bash
         - '-c'
