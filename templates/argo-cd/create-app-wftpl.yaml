@@ -28,7 +28,7 @@ spec:
       retryPolicy: "Always"
     container:
       name: 'create'
-      image: docker.io/sktcloud/argocd-cli:v2.2.5
+      image: harbor-cicd.taco-cat.xyz/tks/argocd-cli:v2.2.5
       imagePullPolicy: IfNotPresent
       command:
       - /bin/bash
