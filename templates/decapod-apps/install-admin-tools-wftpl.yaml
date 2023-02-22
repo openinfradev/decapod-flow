@@ -73,7 +73,7 @@ spec:
       metadata: {}
       container:
         name: create-namespace
-        image: k8s.gcr.io/hyperkube:v1.18.6
+        image: harbor-cicd.taco-cat.xyz/tks/hyperkube:v1.18.6
         command:
           - /bin/bash
           - '-c'
