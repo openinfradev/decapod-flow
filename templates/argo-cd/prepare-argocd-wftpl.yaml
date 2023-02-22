@@ -18,7 +18,7 @@ spec:
     activeDeadlineSeconds: 120
     container:
       name: 'config'
-      image: k8s.gcr.io/hyperkube:v1.18.8
+      image: harbor-cicd.taco-cat.xyz/tks/hyperkube:v1.18.8
       imagePullPolicy: IfNotPresent
       command:
       - /bin/bash
@@ -48,7 +48,7 @@ spec:
   - name: createProject
     container:
       name: create
-      image: docker.io/sktcloud/argocd-cli:v2.2.5
+      image: harbor-cicd.taco-cat.xyz/tks/argocd-cli:v2.2.5
       imagePullPolicy: IfNotPresent
       command:
         - /bin/bash

@@ -73,7 +73,7 @@ spec:
       metadata: {}
       container:
         name: create-namespace
-        image: k8s.gcr.io/hyperkube:v1.18.6
+        image: harbor-cicd.taco-cat.xyz/tks/hyperkube:v1.18.6
         command:
           - /bin/bash
           - '-c'
@@ -106,7 +106,7 @@ spec:
       metadata: {}
       container:
         name: db-init
-        image: docker.io/bitnami/postgresql:11.12.0-debian-10-r44
+        image: harbor-cicd.taco-cat.xyz/tks/postgresql:11.12.0-debian-10-r44
         command:
           - /bin/bash
           - '-cx'

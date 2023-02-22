@@ -28,11 +28,11 @@ spec:
       retryPolicy: "Always"
     container:
       name: 'create'
-      image: docker.io/sktcloud/argocd-cli:v2.2.5
+      image: harbor-cicd.taco-cat.xyz/tks/argocd-cli:v2.2.5
       imagePullPolicy: IfNotPresent
       command:
       - /bin/bash
-      - -c
+      - -cx
       - |
         # log into Argo CD server
         ./argocd login $ARGO_SERVER --plaintext --insecure --username $ARGO_USERNAME \
@@ -54,6 +54,10 @@ spec:
         # check if the argocd app already exists.
         ./argocd app get $ARGOCD_APP_NAME
         if [[ $? -ne 0 ]]; then
+          GIT_SVC_HTTP=${GIT_SVC_URL%://*}
+          GIT_SVC_BASE_URL=${GIT_SVC_URL#*//}
+          REPO="$GIT_SVC_HTTP://$GIT_SVC_BASE_URL/$USERNAME/$SITE_NAME-manifests"
+
           # create new application if it doesn't exist.
           ./argocd app create $ARGOCD_APP_NAME --repo $REPO --revision $REVISION --path $SITE_NAME/$APP_GROUP/$PATH --dest-namespace $NAMESPACE --dest-name $TARGET_CLUSTER --project $APP_GROUP --label app=$ARGOCD_APP_LABEL --directory-recurse
         fi
@@ -69,11 +73,11 @@ spec:
       envFrom:
         - secretRef:
             name: "decapod-argocd-config"
+        - secretRef:
+            name: "git-svc-token"
       env:
         - name: SITE_NAME
           value: "{{workflow.parameters.site_name}}"
-        - name: REPO
-          value: "{{workflow.parameters.manifest_repo_url}}"
         - name: REVISION
           value: "{{workflow.parameters.revision}}"
         - name: APP_GROUP
