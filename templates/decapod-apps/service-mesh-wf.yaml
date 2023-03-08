@@ -33,7 +33,8 @@ spec:
               [
                 { "namespace": "istio-system", "label": "name=lma,taco-tls=enabled" },
                 { "namespace": "istio-ingress", "label": "istio-injection=enabled,taco-tls=enabled" },
-                { "namespace": "lma", "label": "name=lma,taco-tls=enabled" }
+                { "namespace": "lma", "label": "name=lma,taco-tls=enabled" },
+                { "namespace": "elastic-system", "label": "name=lma,taco-tls=enabled" }
               ]
 
     - - name: eck-operator
