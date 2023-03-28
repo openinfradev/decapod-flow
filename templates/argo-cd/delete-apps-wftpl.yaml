@@ -41,7 +41,8 @@ spec:
         app_list=$(./argocd app list -l $FILTER --output name | grep -v operator | grep -v crds)
         if [[ $? -eq 0 && -n $app_list ]]; then
           echo -e "[1st phase] Deleting apps:\n$app_list"
-          echo "$app_list" | xargs ./argocd app delete --cascade -y
+          echo "$app_list" | xargs ./argocd app terminate-op || true
+          echo "$app_list" | xargs ./argocd app delete --cascade --propagation-policy background -y
 
           until [ $(./argocd app list -l $FILTER --output name | grep -v operator | grep -v crds | wc -l) == 0 ]
           do
@@ -59,7 +60,8 @@ spec:
         app_list=$(./argocd app list -l $FILTER --output name)
         if [[ $? -eq 0 && -n $app_list ]]; then
           echo -e "[2nd phase] Deleting operators:\n$app_list"
-          echo "$app_list" | xargs ./argocd app delete --cascade -y
+          echo "$app_list" | xargs ./argocd app terminate-op || true
+          echo "$app_list" | xargs ./argocd app delete --cascade --propagation-policy background -y
 
           until [ $(./argocd app list -l $FILTER --output name | wc -l) == 0 ]
           do
@@ -108,7 +110,8 @@ spec:
         fi
 
         echo "Found app '$APP'. Start deleting it.."
-        ./argocd app delete $APP --cascade -y
+        ./argocd app terminate-op $APP || true
+        ./argocd app delete $APP --cascade --propagation-policy background -y
 
         while (./argocd app list --output name | grep -E "^$APP$" )
         do
