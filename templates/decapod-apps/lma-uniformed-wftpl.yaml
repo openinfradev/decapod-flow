@@ -149,19 +149,6 @@ spec:
               ]
         dependencies: [prepare-lma]
 
-      - name: federation
-        templateRef:
-          name: create-application
-          template: installApps
-        arguments:
-          parameters:
-          - name: list
-            value: |
-              [
-                { "app_group": "lma", "path": "thanos", "namespace": "lma", "target_cluster": "" }
-              ]
-        dependencies: [prometheus,"logging-{{workflow.parameters.logging_component}}"]
-
       - name: grafana
         templateRef:
           name: create-application
@@ -173,4 +160,4 @@ spec:
               [
                 { "app_group": "lma", "path": "grafana", "namespace": "lma", "target_cluster": "" }
               ]
-        dependencies: [federation]
+        dependencies: [prometheus,"logging-{{workflow.parameters.logging_component}}"]
