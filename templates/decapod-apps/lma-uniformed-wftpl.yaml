@@ -51,9 +51,13 @@ spec:
     activeDeadlineSeconds: 120
 
   - name: deploy
+    inputs:
+      parameters:
+        - name: install_logging_infra
+          value: true
     dag:
       tasks:
-      - name: prometheus-operator
+      - name: lma-operators
         templateRef:
           name: create-application
           template: installApps
@@ -80,7 +84,7 @@ spec:
               [
                 { "app_group": "lma", "path": "eck-operator", "namespace": "elastic-system", "target_cluster": "" }
               ]
-        when: "{{workflow.parameters.logging_component}} == 'efk'"
+        when: "{{workflow.parameters.logging_component}} == 'efk' && {{workflow.parameters.organization_id}} == null"
         dependencies: []
 
       - name: logging-efk
@@ -92,11 +96,9 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "lma", "path": "eck-resource", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "fluentbit", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma", "target_cluster": "" }
+                { "app_group": "lma", "path": "eck-resource", "namespace": "lma", "target_cluster": "" }
               ]
-        when: "{{workflow.parameters.logging_component}} == 'efk'"
+        when: "{{workflow.parameters.logging_component}} == 'efk' && {{workflow.parameters.organization_id}} == null"
         dependencies: [eck-operator]
 
       - name: logging-loki
@@ -109,11 +111,9 @@ spec:
             value: |
               [
                 { "app_group": "lma", "path": "minio", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "loki", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "fluentbit", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma", "target_cluster": "" }
+                { "app_group": "lma", "path": "loki", "namespace": "lma", "target_cluster": "" }
               ]
-        when: "{{workflow.parameters.logging_component}} == 'loki'"
+        when: "{{workflow.parameters.logging_component}} == 'loki' && {{workflow.parameters.organization_id}} == null"
         dependencies: []
 
       - name: prepare-lma
@@ -126,9 +126,11 @@ spec:
             value: |
               [
                 { "app_group": "lma", "path": "thanos-config", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "prepare-etcd-secret", "namespace": "lma", "target_cluster": "" }
+                { "app_group": "lma", "path": "prepare-etcd-secret", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "fluentbit", "namespace": "lma", "target_cluster": "" },
+                { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma", "target_cluster": "" }
               ]
-        dependencies: [prometheus-operator]
+        dependencies: [lma-operators]
 
       - name: prometheus
         templateRef:
@@ -160,4 +162,5 @@ spec:
               [
                 { "app_group": "lma", "path": "grafana", "namespace": "lma", "target_cluster": "" }
               ]
+        when: "{{inputs.parameters.install_logging_infra}}"
         dependencies: [prometheus,"logging-{{workflow.parameters.logging_component}}"]
