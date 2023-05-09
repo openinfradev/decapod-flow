@@ -56,7 +56,7 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "servicemesh-mesh", "path": "cert-manager", "namespace": "tks-msa", "target_cluster": "" }
+                { "app_group": "service-mesh", "path": "cert-manager", "namespace": "tks-msa", "target_cluster": "" }
               ]
 
       - name: k8ssandra-operator
@@ -68,8 +68,8 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "servicemesh-mesh", "path": "k8ssandra-operator-crds", "namespace": "tks-msa", "target_cluster": "" },
-                { "app_group": "servicemesh-mesh", "path": "k8ssandra-operator", "namespace": "tks-msa", "target_cluster": "" }
+                { "app_group": "service-mesh", "path": "k8ssandra-operator-crds", "namespace": "tks-msa", "target_cluster": "" },
+                { "app_group": "service-mesh", "path": "k8ssandra-operator", "namespace": "tks-msa", "target_cluster": "" }
               ]
         dependencies:
         - cert-manager
@@ -83,7 +83,7 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "servicemesh-mesh", "path": "servicemesh-k8ssandra-resource", "namespace": "tks-msa", "target_cluster": "" }
+                { "app_group": "service-mesh", "path": "servicemesh-k8ssandra-resource", "namespace": "tks-msa", "target_cluster": "" }
               ]
         dependencies:
         - k8ssandra-operator
