@@ -31,47 +31,9 @@ spec:
           - name: list
             value: |
               [
-                { "namespace": "istio-system", "label": "name=lma,taco-tls=enabled" },
-                { "namespace": "istio-ingress", "label": "istio-injection=enabled,taco-tls=enabled" },
-                { "namespace": "lma", "label": "name=lma,taco-tls=enabled" },
-                { "namespace": "elastic-system", "label": "name=lma,taco-tls=enabled" }
+                { "namespace": "tks-msa", "label": "name=lma,taco-tls=enabled" },
+                { "namespace": "tks-gateway", "label": "name=lma,taco-tls=enabled" }
               ]
-
-    - - name: eck-operator
-        templateRef:
-          name: create-application
-          template: installApps
-        arguments:
-          parameters:
-          - name: list
-            value: |
-              [
-                { "app_group": "lma", "path": "eck-operator", "namespace": "elastic-system", "target_cluster": "" }
-              ]
-
-    - - name: logging-efk
-        templateRef:
-          name: create-application
-          template: installApps
-        arguments:
-          parameters:
-          - name: list
-            value: |
-              [
-                { "app_group": "lma", "path": "eck-resource", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma", "target_cluster": "" }
-              ]
-
-    - - name: create-eck-secret-certs
-        template: copy-eck-secret
-        arguments:
-          parameters:
-          - name: secret_name
-            value: eck-elasticsearch-es-http-certs-public
-          - name: source_namespace
-            value: lma
-          - name: target_namespace
-            value: istio-system
 
     - - name: deploy
         template: deploy
@@ -85,6 +47,47 @@ spec:
   - name: deploy
     dag:
       tasks:
+      - name: cert-manager
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "servicemesh-mesh", "path": "cert-manager", "namespace": "tks-msa", "target_cluster": "" }
+              ]
+
+      - name: k8ssandra-operator
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "servicemesh-mesh", "path": "k8ssandra-operator-crds", "namespace": "tks-msa", "target_cluster": "" },
+                { "app_group": "servicemesh-mesh", "path": "k8ssandra-operator", "namespace": "tks-msa", "target_cluster": "" }
+              ]
+        dependencies:
+        - cert-manager
+
+      - name: servicemesh-k8ssandra-resource
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "servicemesh-mesh", "path": "servicemesh-k8ssandra-resource", "namespace": "tks-msa", "target_cluster": "" }
+              ]
+        dependencies:
+        - k8ssandra-operator
+
       - name: istio-base
         templateRef:
           name: create-application
@@ -94,10 +97,13 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "service-mesh", "path": "istio-base-crds", "namespace": "istio-system", "target_cluster": "" },
-                { "app_group": "service-mesh", "path": "istio-base", "namespace": "istio-system", "target_cluster": "" }
+                { "app_group": "service-mesh", "path": "istio-base-crds", "namespace": "tks-msa", "target_cluster": "" },
+                { "app_group": "service-mesh", "path": "istio-base", "namespace": "tks-msa", "target_cluster": "" }
                 
               ]
+        dependencies:
+        - servicemesh-k8ssandra-resource
+
       - name: istiod
         templateRef:
           name: create-application
@@ -107,11 +113,12 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "service-mesh", "path": "istiod", "namespace": "istio-system", "target_cluster": "" }
+                { "app_group": "service-mesh", "path": "istiod", "namespace": "tks-msa", "target_cluster": "" }
               ]
         dependencies:
         - istio-base
-      - name: istio-ingress-gateway
+
+      - name: istio-gateway
         templateRef:
           name: create-application
           template: installApps
@@ -120,10 +127,12 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "service-mesh", "path": "istio-ingress-gateway", "namespace": "istio-ingress", "target_cluster": "" }
+                { "app_group": "service-mesh", "path": "istio-ingressgateway", "namespace": "tks-gateway", "target_cluster": "" },
+                { "app_group": "service-mesh", "path": "istio-egressgateway", "namespace": "tks-gateway", "target_cluster": "" }
               ]
         dependencies:
         - istiod
+
       - name: jaeger-kiali-operator
         templateRef:
           name: create-application
@@ -133,26 +142,13 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "service-mesh", "path": "jaeger-operator-crds", "namespace": "istio-system", "target_cluster": "" },
-                { "app_group": "service-mesh", "path": "kiali-operator-crds", "namespace": "istio-system", "target_cluster": "" },
-                { "app_group": "service-mesh", "path": "jaeger-operator", "namespace": "istio-system", "target_cluster": "" },
-                { "app_group": "service-mesh", "path": "kiali-operator", "namespace": "istio-system", "target_cluster": "" }
+                { "app_group": "service-mesh", "path": "jaeger-operator-crds", "namespace": "tks-msa", "target_cluster": "" },
+                { "app_group": "service-mesh", "path": "kiali-operator-crds", "namespace": "tks-msa", "target_cluster": "" },
+                { "app_group": "service-mesh", "path": "jaeger-operator", "namespace": "tks-msa", "target_cluster": "" },
+                { "app_group": "service-mesh", "path": "kiali-operator", "namespace": "tks-msa", "target_cluster": "" }
               ]
         dependencies:
         - istiod
-
-      - name: copy-eck-secret
-        template: copy-eck-secret
-        arguments:
-          parameters:
-          - name: secret_name
-            value: "eck-elasticsearch-es-elastic-user"
-          - name: source_namespace
-            value: "lma"
-          - name: target_namespace
-            value: "istio-system"
-        dependencies:
-        - jaeger-kiali-operator 
 
       - name: servicemesh-jaeger-kiali-resource
         templateRef:
@@ -163,11 +159,11 @@ spec:
             - name: list
               value: |
                 [
-                  { "app_group": "service-mesh", "path": "servicemesh-jaeger-resource", "namespace": "istio-system", "target_cluster": "" },
-                  { "app_group": "service-mesh", "path": "servicemesh-kiali-resource", "namespace": "istio-system", "target_cluster": "" }
+                  { "app_group": "service-mesh", "path": "servicemesh-jaeger-resource", "namespace": "tks-msa", "target_cluster": "" },
+                  { "app_group": "service-mesh", "path": "servicemesh-kiali-resource", "namespace": "tks-msa", "target_cluster": "" }
                 ]
         dependencies:
-        - copy-eck-secret
+        - jaeger-kiali-operator
 
       - name: grafana-prometheus-resource
         templateRef:
@@ -178,9 +174,9 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "service-mesh", "path": "servicemesh-grafana-dashboard", "namespace": "istio-system", "target_cluster": "" },
-                { "app_group": "service-mesh", "path": "servicemesh-prometheusmonitor", "namespace": "istio-system", "target_cluster": "" },
-                { "app_group": "service-mesh", "path": "servicemesh-prometheusrule", "namespace": "istio-system", "target_cluster": "" }
+                { "app_group": "service-mesh", "path": "servicemesh-grafana-dashboard", "namespace": "tks-msa", "target_cluster": "" },
+                { "app_group": "service-mesh", "path": "servicemesh-prometheusmonitor", "namespace": "tks-msa", "target_cluster": "" },
+                { "app_group": "service-mesh", "path": "servicemesh-prometheusrule", "namespace": "tks-msa", "target_cluster": "" }
               ]
         dependencies:
         - servicemesh-jaeger-kiali-resource
@@ -242,62 +238,6 @@ spec:
           - {name: namespace, value: "{{item.namespace}}"}
           - {name: label, value: "{{item.label}}"}
         withParam: "{{inputs.parameters.list}}"
-
-  - name: copy-eck-secret
-    inputs:
-      parameters:
-      - name: secret_name
-        value: "eck-elasticsearch-es-http-certs-public"
-      - name: source_namespace
-        value: "lma"
-      - name: target_namespace
-        value: "istio-system"
-    container:
-      name: copy-eck-secret
-      image: harbor-cicd.taco-cat.xyz/tks/hyperkube:v1.18.6
-      command:
-        - /bin/bash
-        - '-c'
-        - |
-          function log() {
-            level=$1
-            msg=$2
-            date=$(date '+%F %H:%M:%S')
-            echo "[$date] $level     $msg"
-          }
-
-          CLUSTER_ID={{workflow.parameters.cluster_id}}
-          kube_params=""
-          if [[ -n "${CLUSTER_ID}" ]]; then
-            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
-            echo -e "kube_secret:\n$kube_secret" | head -n 5
-            cat <<< "$kube_secret" > /etc/kubeconfig
-            kube_params+="--kubeconfig=/etc/kubeconfig"
-          fi
-
-          until [ $(kubectl $kube_params get secret ${SECRET_NAME} -n ${SOURCE_NAMESPACE} --output name | wc -l) == 1 ]
-          do
-            echo "Waiting 10 secs for eck to be installed.."
-            sleep 10
-          done
-
-          kubectl $kube_params delete secret ${SECRET_NAME} -n ${TARGET_NAMESPACE} || true
-          kubectl $kube_params get secret ${SECRET_NAME} -n ${SOURCE_NAMESPACE} -o yaml \
-            | grep -v '^\s*namespace:\s' \
-            | kubectl $kube_params apply -n ${TARGET_NAMESPACE} -f -
-            log "INFO" "${SECRET_NAME} successfully created."
-      
-      env:
-      - name: SECRET_NAME
-        value: '{{inputs.parameters.secret_name}}'
-      - name: SOURCE_NAMESPACE
-        value: '{{inputs.parameters.source_namespace}}'
-      - name: TARGET_NAMESPACE
-        value: '{{inputs.parameters.target_namespace}}'
-      resources: {}
-    activeDeadlineSeconds: 900
-    retryStrategy:
-      limit: 2
 
   - name: sync-app
     container:
