@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
-  name: remove-servicemesh-all
+  name: remove-servicemesh-all-es
   namespace: argo
 spec:
   entrypoint: remove-start
@@ -23,6 +23,15 @@ spec:
     - - name: disableAutoSync
         template: disableAutoSync
 
+    # Delete CRs first so that it doesn't hang
+    # due to earlier service-account deletion. 
+    - - name: removeFluentbitCR
+        template: removeFluentbitCR
+        arguments:
+          parameters:
+          - name: namespace
+            value:  "lma"
+
     - - name: remove-service-mesh-argocd-apps
         templateRef:
           name: delete-apps
@@ -35,8 +44,8 @@ spec:
           - name: list
             value: |
               [
-                { "namespace": "tks-gateway" },
-                { "namespace": "tks-msa" }
+                { "namespace": "istio-ingress" },
+                { "namespace": "istio-system" }
               ]
   
   #=========================================================
