@@ -41,7 +41,9 @@ spec:
         app_list=$(./argocd app list -l $FILTER --output name | grep -v operator | grep -v crds)
         if [[ $? -eq 0 && -n $app_list ]]; then
           echo -e "[1st phase] Deleting apps:\n$app_list"
-          echo "$app_list" | xargs ./argocd app terminate-op || true
+          for app in $app_list; do
+            ./argocd app terminate-op $app || true
+          done
           echo "$app_list" | xargs ./argocd app delete --cascade --propagation-policy background -y
 
           until [ $(./argocd app list -l $FILTER --output name | grep -v operator | grep -v crds | wc -l) == 0 ]

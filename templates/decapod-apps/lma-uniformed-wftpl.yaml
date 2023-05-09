@@ -9,6 +9,8 @@ spec:
     parameters:
     - name: site_name
       value: "decapod-reference"
+    - name: is_mananged_cluster
+      vale: "false"
     # valid value: 'efk' or 'loki'
     - name: logging_component
       value: "efk"
@@ -26,7 +28,10 @@ spec:
           arguments: {}
       - - name: deploy
           template: deploy
-          arguments: {}
+          arguments:
+            parameters:
+            - name: is_mananged_cluster
+              value: "{{workflow.parameters.is_mananged_cluster}}"
 
   #######################
   # Template Definition #
@@ -55,6 +60,8 @@ spec:
       parameters:
         - name: install_logging_infra
           value: true
+        - name: is_mananged_cluster
+          value: false
     dag:
       tasks:
       - name: lma-operators
@@ -116,7 +123,7 @@ spec:
         when: "{{workflow.parameters.logging_component}} == 'loki' && {{workflow.parameters.organization_id}} == null"
         dependencies: []
 
-      - name: prepare-lma
+      - name: prepare-lma-metrics
         templateRef:
           name: create-application
           template: installApps
@@ -126,11 +133,25 @@ spec:
             value: |
               [
                 { "app_group": "lma", "path": "thanos-config", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "prepare-etcd-secret", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "fluentbit", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma", "target_cluster": "" }
+
+              ]
+        dependencies: [lma-operator]
+
+      - name: prepare-lma-etcd
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "lma", "path": "prepare-etcd-secret", "namespace": "lma", "target_cluster": "" }
               ]
         dependencies: [lma-operators]
+        when: "{{ inputs.parameters.is_mananged_cluster }} == false"
 
       - name: prometheus
         templateRef:
@@ -149,7 +170,7 @@ spec:
                 { "app_group": "lma", "path": "prometheus-adapter", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "addons", "namespace": "lma", "target_cluster": "" }
               ]
-        dependencies: [prepare-lma]
+        dependencies: [prepare-lma-metrics, prepare-lma-etcd]
 
       - name: grafana
         templateRef:
