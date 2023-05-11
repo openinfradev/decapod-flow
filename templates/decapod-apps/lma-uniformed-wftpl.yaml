@@ -137,7 +137,7 @@ spec:
                 { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma", "target_cluster": "" }
 
               ]
-        dependencies: [lma-operator]
+        dependencies: [lma-operators]
 
       - name: prepare-lma-etcd
         templateRef:
