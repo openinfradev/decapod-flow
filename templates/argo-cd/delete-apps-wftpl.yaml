@@ -16,7 +16,7 @@ spec:
     activeDeadlineSeconds: 900
     container:
       name: 'delete-apps-by-label'
-      image: harbor-cicd.taco-cat.xyz/tks/argocd-cli:v2.2.5
+      image: harbor.taco-cat.xyz/tks/argocd-cli:v2.2.5
       imagePullPolicy: IfNotPresent
       command:
       - /bin/bash
@@ -95,7 +95,7 @@ spec:
       - name: app_name
     container:
       name: 'delete-apps-by-name'
-      image: harbor-cicd.taco-cat.xyz/tks/argocd-cli:v2.2.5
+      image: harbor.taco-cat.xyz/tks/argocd-cli:v2.2.5
       imagePullPolicy: IfNotPresent
       command:
       - /bin/bash

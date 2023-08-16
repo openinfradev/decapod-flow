@@ -190,7 +190,7 @@ spec:
         value: ""
     container:
       name: create-namespace
-      image: harbor-cicd.taco-cat.xyz/tks/hyperkube:v1.18.6
+      image: harbor.taco-cat.xyz/tks/hyperkube:v1.18.6
       command:
         - /bin/bash
         - '-c'
@@ -242,7 +242,7 @@ spec:
   - name: sync-app
     container:
       name: sync-app
-      image: harbor-cicd.taco-cat.xyz/tks/argocd:latest
+      image: harbor.taco-cat.xyz/tks/argocd:latest
       command:
         - /bin/bash
         - '-c'
