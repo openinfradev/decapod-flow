@@ -60,7 +60,7 @@ spec:
   - name: disableAutoSync
     container:
       name: disable-auto-sync
-      image: harbor-cicd.taco-cat.xyz/tks/argocd-cli:v2.2.5
+      image: harbor.taco-cat.xyz/tks/argocd-cli:v2.2.5
       command:
         - /bin/bash
         - '-c'
@@ -86,7 +86,7 @@ spec:
         - name: namespace
     container:
       name: remove-prometheus-cr
-      image: harbor-cicd.taco-cat.xyz/tks/hyperkube:v1.18.6
+      image: harbor.taco-cat.xyz/tks/hyperkube:v1.18.6
       command:
         - /bin/bash
         - '-c'
@@ -113,7 +113,7 @@ spec:
         - name: namespace
     container:
       name: remove-fluentbit-cr
-      image: harbor-cicd.taco-cat.xyz/tks/hyperkube:v1.18.6
+      image: harbor.taco-cat.xyz/tks/hyperkube:v1.18.6
       command:
         - /bin/bash
         - '-c'
@@ -142,7 +142,7 @@ spec:
         - name: namespace
     container:
       name: remove-leftover
-      image: harbor-cicd.taco-cat.xyz/tks/hyperkube:v1.18.6
+      image: harbor.taco-cat.xyz/tks/hyperkube:v1.18.6
       command:
         - /bin/bash
         - '-c'
