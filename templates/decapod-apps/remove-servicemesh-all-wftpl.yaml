@@ -81,7 +81,7 @@ spec:
           kube_params=""
 
           if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
-            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
+            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-tks-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
             echo -e "kube_secret:\n$kube_secret" | head -n 5
             cat <<< "$kube_secret" > /etc/kubeconfig
 
@@ -149,7 +149,7 @@ spec:
 
           kube_params=""
           if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
-            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
+            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-tks-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
             echo -e "kube_secret:\n$kube_secret" | head -n 5
             cat <<< "$kube_secret" > /etc/kubeconfig
             kube_params+="--kubeconfig=/etc/kubeconfig"
@@ -187,7 +187,7 @@ spec:
         - |
           kube_params=""
           if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
-            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
+            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-tks-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
             echo -e "kube_secret:\n$kube_secret" | head -n 5
             cat <<< "$kube_secret" > /etc/kubeconfig
             kube_params+="--kubeconfig=/etc/kubeconfig"
@@ -283,7 +283,7 @@ spec:
           
           kube_params=""
           if [[ -n "{{workflow.parameters.cluster_id}}" ]]; then
-            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
+            kube_secret=$(kubectl get secret -n {{workflow.parameters.cluster_id}} {{workflow.parameters.cluster_id}}-tks-kubeconfig -o jsonpath="{.data.value}" | base64 -d)
             echo -e "kube_secret:\n$kube_secret" | head -n 5
             cat <<< "$kube_secret" > /etc/kubeconfig
             kube_params+="--kubeconfig=/etc/kubeconfig"
