@@ -14,7 +14,7 @@ spec:
     activeDeadlineSeconds: 120
     container:
       name: 'config'
-      image: harbor-cicd.taco-cat.xyz/tks/hyperkube:v1.18.8
+      image: harbor.taco-cat.xyz/tks/hyperkube:v1.18.8
       imagePullPolicy: IfNotPresent
       command:
       - /bin/bash
