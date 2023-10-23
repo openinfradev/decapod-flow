@@ -64,9 +64,9 @@ spec:
 
         # For crds-only app, set sync-option to 'replace'
         if [[ $ARGOCD_APP_NAME == *crds ]]; then
-          ./argocd app set $ARGOCD_APP_NAME --sync-policy automated --auto-prune --sync-option Replace=true
+          ./argocd app set $ARGOCD_APP_NAME --sync-policy automated --auto-prune --sync-option CreateNamespace=true --sync-option Replace=true
         else
-          ./argocd app set $ARGOCD_APP_NAME --sync-policy automated --auto-prune
+          ./argocd app set $ARGOCD_APP_NAME --sync-policy automated --auto-prune --sync-option CreateNamespace=true
         fi
         ./argocd app sync $ARGOCD_APP_NAME --async
         ./argocd app wait $ARGOCD_APP_NAME --health
