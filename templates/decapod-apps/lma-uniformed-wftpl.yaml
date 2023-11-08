@@ -164,7 +164,6 @@ spec:
               [
                 { "app_group": "lma", "path": "prometheus", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "kube-state-metrics", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "prometheus-process-exporter", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "prometheus-pushgateway", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "prometheus-node-exporter", "namespace": "lma", "target_cluster": ""},
                 { "app_group": "lma", "path": "prometheus-adapter", "namespace": "lma", "target_cluster": "" },
