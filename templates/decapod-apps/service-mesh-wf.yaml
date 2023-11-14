@@ -190,7 +190,7 @@ spec:
             - name: list
               value: |
                 [
-                  { "app_group": "service-mesh", "path": "servicemesh-grafana-dashboard", "namespace": "tks-msa", "target_cluster": "" }
+                  { "app_group": "service-mesh", "path": "gatekeeper", "namespace": "tks-msa", "target_cluster": "" }
                 ]
         dependencies:
           - grafana-prometheus-resource
