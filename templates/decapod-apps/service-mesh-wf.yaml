@@ -37,7 +37,7 @@ spec:
 
     - - name: deploy
         template: deploy
-    
+
     - - name: sync-app
         template: sync-app
 
@@ -180,6 +180,20 @@ spec:
               ]
         dependencies:
         - servicemesh-jaeger-kiali-resource
+
+      - name: gatekeeper
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+            - name: list
+              value: |
+                [
+                  { "app_group": "service-mesh", "path": "servicemesh-grafana-dashboard", "namespace": "tks-msa", "target_cluster": "" }
+                ]
+        dependencies:
+          - grafana-prometheus-resource
 
   - name: create-namespace
     inputs:
