@@ -81,12 +81,6 @@ spec:
           if [[ $? != 0 ]]; then
             ./argocd proj create tks-admin-tools --dest "*,*" --src "*" --allow-cluster-resource "*/*"
           fi
-
-          ./argocd proj get policy
-          if [[ $? != 0 ]]; then
-            ./argocd proj create policy --dest "*,*" --src "*" --allow-cluster-resource "*/*"
-          fi
-
       env:
         - name: ARGO_SERVER
           value: '{{workflow.parameters.argo_server}}'
