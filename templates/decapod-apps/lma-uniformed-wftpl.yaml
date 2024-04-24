@@ -135,6 +135,7 @@ spec:
                 { "app_group": "lma", "path": "thanos-config", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "fluentbit", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma", "target_cluster": "" }
+
               ]
         dependencies: [lma-operators]
 
@@ -166,7 +167,6 @@ spec:
                 { "app_group": "lma", "path": "prometheus-pushgateway", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "prometheus-node-exporter", "namespace": "lma", "target_cluster": ""},
                 { "app_group": "lma", "path": "prometheus-adapter", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "opa-exporter", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "addons", "namespace": "lma", "target_cluster": "" }
               ]
         dependencies: [prepare-lma-metrics, prepare-lma-etcd]
