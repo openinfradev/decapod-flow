@@ -23,6 +23,17 @@ spec:
     - name: deploy
       dag:
         tasks:
+          - name: admin-tools-crd
+            templateRef:
+              name: create-application
+              template: installApps
+            arguments:
+              parameters:
+              - name: list
+                value: |
+                  [
+                    { "app_group": "admin-tools", "path": "admin-tools-CRD", "namespace": "{{workflow.parameters.keycloak_namespace}}", "target_cluster": "in-cluster" }
+                  ]
           - name: create-namespace-for-keycloak
             template: create-namespace
             arguments:
@@ -44,7 +55,6 @@ spec:
                 - name: list
                   value: |
                     [
-                      { "app_group": "admin-tools", "path": "keycloak-operator-crds", "namespace": "{{workflow.parameters.keycloak_namespace}}", "target_cluster": "in-cluster" },
                       { "app_group": "admin-tools", "path": "keycloak-operator", "namespace": "{{workflow.parameters.keycloak_namespace}}", "target_cluster": "in-cluster" }
                     ]
             dependencies:

@@ -38,7 +38,7 @@ spec:
         deleted=False
 
         # Delete normal apps except operators and CRDs
-        app_list=$(./argocd app list -l $FILTER --output name | grep -v operator | grep -v crds)
+        app_list=$(./argocd app list -l $FILTER --output name | grep -v operator | grep -v CRD)
         if [[ $? -eq 0 && -n $app_list ]]; then
           echo -e "[1st phase] Deleting apps:\n$app_list"
           for app in $app_list; do
@@ -46,7 +46,7 @@ spec:
           done
           echo "$app_list" | xargs ./argocd app delete --cascade --propagation-policy background -y
 
-          until [ $(./argocd app list -l $FILTER --output name | grep -v operator | grep -v crds | wc -l) == 0 ]
+          until [ $(./argocd app list -l $FILTER --output name | grep -v operator | grep -v CRD | wc -l) == 0 ]
           do
             echo "Waiting 20 secs for apps to be deleted.."
             sleep 20

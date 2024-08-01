@@ -85,6 +85,17 @@ spec:
   - name: deploy
     dag:
       tasks:
+      - name: servicemesh-crd
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "service-mesh", "path": "service-mesh-CRD", "namespace": "istio-system", "target_cluster": "" }
+              ]
       - name: istio-base
         templateRef:
           name: create-application
@@ -94,9 +105,7 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "service-mesh", "path": "istio-base-crds", "namespace": "istio-system", "target_cluster": "" },
                 { "app_group": "service-mesh", "path": "istio-base", "namespace": "istio-system", "target_cluster": "" }
-                
               ]
       - name: istiod
         templateRef:
@@ -133,8 +142,6 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "service-mesh", "path": "jaeger-operator-crds", "namespace": "istio-system", "target_cluster": "" },
-                { "app_group": "service-mesh", "path": "kiali-operator-crds", "namespace": "istio-system", "target_cluster": "" },
                 { "app_group": "service-mesh", "path": "jaeger-operator", "namespace": "istio-system", "target_cluster": "" },
                 { "app_group": "service-mesh", "path": "kiali-operator", "namespace": "istio-system", "target_cluster": "" }
               ]
