@@ -26,7 +26,7 @@ spec:
       - |
         kubectl get secret decapod-argocd-config -nargo
 
-        if [[ $? =~ 0 ]]; then 
+        if [[ $? =~ 0 ]]; then
           kubectl delete secret decapod-argocd-config -nargo
         fi
 
@@ -81,6 +81,12 @@ spec:
           if [[ $? != 0 ]]; then
             ./argocd proj create tks-admin-tools --dest "*,*" --src "*" --allow-cluster-resource "*/*"
           fi
+
+          ./argocd proj get policy
+          if [[ $? != 0 ]]; then
+            ./argocd proj create policy --dest "*,*" --src "*" --allow-cluster-resource "*/*"
+          fi
+
       env:
         - name: ARGO_SERVER
           value: '{{workflow.parameters.argo_server}}'
