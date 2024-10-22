@@ -64,6 +64,17 @@ spec:
           value: false
     dag:
       tasks:
+      - name: lma-crd
+        templateRef:
+          name: create-application
+          template: installApps
+        arguments:
+          parameters:
+          - name: list
+            value: |
+              [
+                { "app_group": "lma", "path": "CRD", "namespace": "lma", "target_cluster": "" }
+              ]
       - name: lma-operators
         templateRef:
           name: create-application
@@ -73,9 +84,7 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "lma", "path": "prometheus-operator-crds", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "prometheus-operator", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "fluent-operator-crds", "namespace": "lma", "target_cluster": "" },
                 { "app_group": "lma", "path": "fluent-operator", "namespace": "lma", "target_cluster": "" }
               ]
         dependencies: []
