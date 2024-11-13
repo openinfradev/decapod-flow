@@ -33,7 +33,7 @@ spec:
               [
                 { "namespace": "istio-system", "label": "name=lma,taco-tls=enabled" },
                 { "namespace": "istio-ingress", "label": "istio-injection=enabled,taco-tls=enabled" },
-                { "namespace": "lma", "label": "name=lma,taco-tls=enabled" },
+                { "namespace": "taco-system", "label": "name=lma,taco-tls=enabled" },
                 { "namespace": "elastic-system", "label": "name=lma,taco-tls=enabled" }
               ]
 
@@ -58,8 +58,8 @@ spec:
           - name: list
             value: |
               [
-                { "app_group": "lma", "path": "eck-resource", "namespace": "lma", "target_cluster": "" },
-                { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "lma", "target_cluster": "" }
+                { "app_group": "lma", "path": "eck-resource", "namespace": "taco-system", "target_cluster": "" },
+                { "app_group": "lma", "path": "kubernetes-event-exporter", "namespace": "taco-system", "target_cluster": "" }
               ]
 
     - - name: create-eck-secret-certs
